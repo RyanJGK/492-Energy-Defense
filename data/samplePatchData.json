@@ -1,0 +1,186 @@
+[
+  {
+    "hostname": "PROD-WEB-01",
+    "os": "Windows Server 2019",
+    "lastPatched": "2025-07-01T00:00:00Z",
+    "missingPatches": [
+      {
+        "patchId": "KB5012170",
+        "cveId": "CVE-2022-30190",
+        "cveScore": 9.8,
+        "description": "Microsoft Support Diagnostic Tool (MSDT) Remote Code Execution Vulnerability (Follina)",
+        "releaseDate": "2022-05-30"
+      },
+      {
+        "patchId": "KB5020953",
+        "cveId": "CVE-2023-21674",
+        "cveScore": 8.8,
+        "description": "Windows Advanced Local Procedure Call Elevation of Privilege Vulnerability",
+        "releaseDate": "2023-01-10"
+      }
+    ],
+    "installedPatches": [
+      "KB4577066",
+      "KB5003173"
+    ],
+    "complianceStatus": "Non-Compliant",
+    "eol": false
+  },
+  {
+    "hostname": "DB-PROD-03",
+    "os": "SQL Server 2012 (EOL: July 2022)",
+    "lastPatched": "2022-06-15T00:00:00Z",
+    "missingPatches": [
+      {
+        "patchId": "N/A",
+        "cveId": "CVE-2023-21528",
+        "cveScore": 8.8,
+        "description": "SQL Server Remote Code Execution Vulnerability (No patch available - EOL)",
+        "releaseDate": "2023-02-14"
+      },
+      {
+        "patchId": "N/A",
+        "cveId": "CVE-2023-29372",
+        "cveScore": 8.1,
+        "description": "SQL Server Elevation of Privilege Vulnerability (No patch available - EOL)",
+        "releaseDate": "2023-05-09"
+      },
+      {
+        "patchId": "N/A",
+        "cveId": "CVE-2023-36420",
+        "cveScore": 7.5,
+        "description": "SQL Server Information Disclosure Vulnerability (No patch available - EOL)",
+        "releaseDate": "2023-11-14"
+      }
+    ],
+    "installedPatches": [
+      "KB2679367",
+      "KB2716441"
+    ],
+    "complianceStatus": "Critical - EOL",
+    "eol": true,
+    "endOfLife": true
+  },
+  {
+    "hostname": "APP-SERVER-05",
+    "os": "Ubuntu 20.04 LTS",
+    "lastPatched": "2025-11-01T00:00:00Z",
+    "missingPatches": [
+      {
+        "patchId": "USN-6534-1",
+        "cveId": "CVE-2023-5678",
+        "cveScore": 5.5,
+        "description": "OpenSSL Denial of Service Vulnerability",
+        "releaseDate": "2023-11-28"
+      }
+    ],
+    "installedPatches": [
+      "USN-6412-1",
+      "USN-6445-2",
+      "USN-6502-1"
+    ],
+    "complianceStatus": "Compliant",
+    "eol": false
+  },
+  {
+    "hostname": "WEB-DMZ-02",
+    "os": "Red Hat Enterprise Linux 8",
+    "lastPatched": "2025-10-15T00:00:00Z",
+    "missingPatches": [
+      {
+        "patchId": "RHSA-2025:7373",
+        "cveId": "CVE-2025-44187",
+        "cveScore": 7.8,
+        "description": "Kernel Use-After-Free Vulnerability",
+        "releaseDate": "2025-10-25"
+      },
+      {
+        "patchId": "RHSA-2025:7401",
+        "cveId": "CVE-2025-45490",
+        "cveScore": 6.7,
+        "description": "Apache HTTP Server Cross-Site Scripting",
+        "releaseDate": "2025-11-01"
+      }
+    ],
+    "installedPatches": [
+      "RHSA-2025:7200",
+      "RHSA-2025:7155"
+    ],
+    "complianceStatus": "Warning",
+    "eol": false
+  },
+  {
+    "hostname": "FILE-SERVER-01",
+    "os": "Windows Server 2016",
+    "lastPatched": "2025-08-20T00:00:00Z",
+    "missingPatches": [
+      {
+        "patchId": "KB5031362",
+        "cveId": "CVE-2023-36424",
+        "cveScore": 9.0,
+        "description": "Windows Common Log File System Driver Elevation of Privilege Vulnerability",
+        "releaseDate": "2023-10-10"
+      }
+    ],
+    "installedPatches": [
+      "KB5003638",
+      "KB5015808"
+    ],
+    "complianceStatus": "Non-Compliant",
+    "eol": false
+  },
+  {
+    "hostname": "DEV-WORKSTATION-12",
+    "os": "Windows 10 Pro",
+    "lastPatched": "2025-11-05T00:00:00Z",
+    "missingPatches": [],
+    "installedPatches": [
+      "KB5032189",
+      "KB5031445",
+      "KB5030211"
+    ],
+    "complianceStatus": "Compliant",
+    "eol": false
+  },
+  {
+    "hostname": "MAIL-SERVER-01",
+    "os": "Exchange Server 2013 (EOL: April 2023)",
+    "lastPatched": "2023-03-15T00:00:00Z",
+    "missingPatches": [
+      {
+        "patchId": "N/A",
+        "cveId": "CVE-2023-32031",
+        "cveScore": 9.8,
+        "description": "Exchange Server Remote Code Execution Vulnerability (No patch available - EOL)",
+        "releaseDate": "2023-08-08"
+      },
+      {
+        "patchId": "N/A",
+        "cveId": "CVE-2023-36039",
+        "cveScore": 8.8,
+        "description": "Exchange Server Spoofing Vulnerability (No patch available - EOL)",
+        "releaseDate": "2023-09-12"
+      }
+    ],
+    "installedPatches": [
+      "KB4488406",
+      "KB5002155"
+    ],
+    "complianceStatus": "Critical - EOL",
+    "eol": true,
+    "endOfLife": true
+  },
+  {
+    "hostname": "API-GATEWAY-01",
+    "os": "Ubuntu 22.04 LTS",
+    "lastPatched": "2025-11-10T00:00:00Z",
+    "missingPatches": [],
+    "installedPatches": [
+      "USN-6548-1",
+      "USN-6547-2",
+      "USN-6540-1"
+    ],
+    "complianceStatus": "Compliant",
+    "eol": false
+  }
+]

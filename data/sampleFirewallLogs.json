@@ -1,0 +1,236 @@
+[
+  {
+    "sourceIP": "192.168.1.50",
+    "destinationIP": "172.16.0.10",
+    "destinationPort": 443,
+    "protocol": "HTTPS",
+    "action": "allow",
+    "timestamp": "2025-11-12T09:15:23Z",
+    "bytes": 15234
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 22,
+    "protocol": "SSH",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:15Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 23,
+    "protocol": "TELNET",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:17Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 80,
+    "protocol": "HTTP",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:19Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 443,
+    "protocol": "HTTPS",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:21Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 3389,
+    "protocol": "RDP",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:23Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 8080,
+    "protocol": "HTTP",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:25Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 8443,
+    "protocol": "HTTPS",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:27Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 21,
+    "protocol": "FTP",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:29Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 25,
+    "protocol": "SMTP",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:31Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:33Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "203.0.113.88",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 3306,
+    "protocol": "MYSQL",
+    "action": "block",
+    "timestamp": "2025-11-12T02:30:35Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "192.168.1.75",
+    "destinationIP": "172.16.0.20",
+    "destinationPort": 443,
+    "protocol": "HTTPS",
+    "action": "allow",
+    "timestamp": "2025-11-12T10:30:00Z",
+    "bytes": 45678
+  },
+  {
+    "sourceIP": "198.51.100.45",
+    "destinationIP": "172.16.0.100",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T03:15:10Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "198.51.100.45",
+    "destinationIP": "172.16.0.101",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T03:15:12Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "198.51.100.45",
+    "destinationIP": "172.16.0.102",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T03:15:14Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "198.51.100.45",
+    "destinationIP": "172.16.0.103",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T03:15:16Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "198.51.100.45",
+    "destinationIP": "172.16.0.104",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T03:15:18Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "198.51.100.45",
+    "destinationIP": "172.16.0.105",
+    "destinationPort": 445,
+    "protocol": "SMB",
+    "action": "block",
+    "timestamp": "2025-11-12T03:15:20Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "10.0.0.100",
+    "destinationIP": "172.16.0.30",
+    "destinationPort": 80,
+    "protocol": "HTTP",
+    "action": "allow",
+    "timestamp": "2025-11-12T14:22:15Z",
+    "bytes": 8734
+  },
+  {
+    "sourceIP": "45.33.32.200",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 22,
+    "protocol": "SSH",
+    "action": "block",
+    "timestamp": "2025-11-12T01:05:30Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "45.33.32.200",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 22,
+    "protocol": "SSH",
+    "action": "block",
+    "timestamp": "2025-11-12T01:05:35Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "45.33.32.200",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 22,
+    "protocol": "SSH",
+    "action": "block",
+    "timestamp": "2025-11-12T01:05:40Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "45.33.32.200",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 22,
+    "protocol": "SSH",
+    "action": "block",
+    "timestamp": "2025-11-12T01:05:45Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "45.33.32.200",
+    "destinationIP": "172.16.0.5",
+    "destinationPort": 22,
+    "protocol": "SSH",
+    "action": "block",
+    "timestamp": "2025-11-12T01:05:50Z",
+    "bytes": 0
+  },
+  {
+    "sourceIP": "192.168.1.120",
+    "destinationIP": "172.16.0.40",
+    "destinationPort": 443,
+    "protocol": "HTTPS",
+    "action": "allow",
+    "timestamp": "2025-11-12T13:20:00Z",
+    "bytes": 23456
+  }
+]
