@@ -1,0 +1,143 @@
+{
+  "logins": [
+    {
+      "timestamp": "2024-11-06T02:15:00Z",
+      "ip": "41.203.72.15",
+      "username": "admin",
+      "success": false,
+      "attempts": 47,
+      "country": "Nigeria",
+      "user_agent": "Mozilla/5.0 (Windows NT 10.0)"
+    },
+    {
+      "timestamp": "2024-11-06T02:18:30Z",
+      "ip": "185.220.101.45",
+      "username": "root",
+      "success": false,
+      "attempts": 32,
+      "country": "Russia",
+      "user_agent": "curl/7.68.0"
+    },
+    {
+      "timestamp": "2024-11-06T09:30:15Z",
+      "ip": "192.168.1.100",
+      "username": "jsmith",
+      "success": true,
+      "attempts": 1,
+      "country": "United States",
+      "user_agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X)"
+    },
+    {
+      "timestamp": "2024-11-06T03:45:20Z",
+      "ip": "103.85.24.155",
+      "username": "administrator",
+      "success": false,
+      "attempts": 28,
+      "country": "China",
+      "user_agent": "python-requests/2.28.0"
+    }
+  ],
+  "firewall": [
+    {
+      "timestamp": "2024-11-06T14:23:11Z",
+      "src_ip": "192.168.1.105",
+      "dst_ip": "8.8.8.8",
+      "dst_port": 53,
+      "protocol": "UDP",
+      "bytes": 1560,
+      "packets": 12,
+      "action": "ALLOW"
+    },
+    {
+      "timestamp": "2024-11-06T14:25:03Z",
+      "src_ip": "10.0.5.42",
+      "dst_ip": "104.18.32.77",
+      "dst_port": 443,
+      "protocol": "TCP",
+      "bytes": 256000,
+      "packets": 450,
+      "action": "ALLOW"
+    },
+    {
+      "timestamp": "2024-11-06T14:26:15Z",
+      "src_ip": "192.168.1.200",
+      "dst_ip": "185.220.100.240",
+      "dst_port": 22,
+      "protocol": "TCP",
+      "bytes": 4500,
+      "packets": 75,
+      "action": "BLOCK",
+      "flags": "SYN"
+    },
+    {
+      "timestamp": "2024-11-06T14:27:00Z",
+      "src_ip": "192.168.1.200",
+      "dst_ip": "185.220.100.240",
+      "dst_port": 3389,
+      "protocol": "TCP",
+      "bytes": 3200,
+      "packets": 50,
+      "action": "BLOCK",
+      "flags": "SYN"
+    },
+    {
+      "timestamp": "2024-11-06T14:27:30Z",
+      "src_ip": "192.168.1.200",
+      "dst_ip": "185.220.100.240",
+      "dst_port": 445,
+      "protocol": "TCP",
+      "bytes": 2800,
+      "packets": 42,
+      "action": "BLOCK",
+      "flags": "SYN"
+    },
+    {
+      "timestamp": "2024-11-06T14:30:00Z",
+      "src_ip": "10.0.5.42",
+      "dst_ip": "23.95.102.33",
+      "dst_port": 443,
+      "protocol": "TCP",
+      "bytes": 15600000,
+      "packets": 12000,
+      "action": "ALLOW"
+    }
+  ],
+  "patches": [
+    {
+      "hostname": "SCADA-01",
+      "os": "Windows Server 2019",
+      "missing_cves": ["CVE-2024-1234", "CVE-2024-5678", "CVE-2023-9999"],
+      "cvss_scores": [9.8, 7.5, 8.2],
+      "days_unpatched": 45,
+      "last_scan": "2024-11-05T10:00:00Z",
+      "criticality": "critical"
+    },
+    {
+      "hostname": "WEB-SERVER-02",
+      "os": "Ubuntu 22.04 LTS",
+      "missing_cves": ["CVE-2024-3333"],
+      "cvss_scores": [5.3],
+      "days_unpatched": 12,
+      "last_scan": "2024-11-05T10:00:00Z",
+      "criticality": "high"
+    },
+    {
+      "hostname": "DB-PROD-01",
+      "os": "Red Hat Enterprise Linux 8",
+      "missing_cves": ["CVE-2024-4444", "CVE-2024-5555"],
+      "cvss_scores": [8.8, 9.1],
+      "days_unpatched": 38,
+      "last_scan": "2024-11-05T10:00:00Z",
+      "criticality": "critical"
+    },
+    {
+      "hostname": "WORKSTATION-15",
+      "os": "Windows 11 Pro",
+      "missing_cves": ["CVE-2024-6666"],
+      "cvss_scores": [4.3],
+      "days_unpatched": 5,
+      "last_scan": "2024-11-05T10:00:00Z",
+      "criticality": "medium"
+    }
+  ]
+}
