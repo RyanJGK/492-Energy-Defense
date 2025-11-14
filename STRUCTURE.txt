@@ -1,0 +1,139 @@
+AI AGENT SERVICE - PROJECT STRUCTURE
+=====================================
+
+workspace/
+│
+├── 📁 src/                          # Application source code
+│   ├── 📁 agent/                    # Agent module
+│   │   ├── __init__.py              # Module exports
+│   │   ├── llm_client.py            # Ollama API client (retry logic)
+│   │   └── agent_core.py            # Agent processing logic
+│   │
+│   ├── 📁 api/                      # API module
+│   │   ├── __init__.py              # Module exports
+│   │   └── server.py                # FastAPI server & endpoints
+│   │
+│   ├── config.py                    # Configuration management
+│   └── main.py                      # Application entry point
+│
+├── 🐳 Docker Files                  # Containerization
+│   ├── Dockerfile                   # Python service container
+│   ├── docker-compose.yml           # Multi-service orchestration
+│   └── .dockerignore                # Build exclusions
+│
+├── ⚙️  Configuration                # Setup & config
+│   ├── requirements.txt             # Python dependencies
+│   ├── .env.example                 # Environment template
+│   └── .gitignore                   # Git exclusions
+│
+├── 🔧 Scripts                       # Automation
+│   ├── setup.sh                     # Automated setup script
+│   └── test_agent.sh                # Test suite
+│
+├── 📚 Documentation                 # Guides & docs
+│   ├── README.md                    # Complete documentation
+│   ├── QUICKSTART.md                # 5-minute guide
+│   ├── EXAMPLES.md                  # API examples
+│   ├── PROJECT_SUMMARY.md           # Project overview
+│   └── STRUCTURE.txt                # This file
+│
+└── LICENSE                          # License file
+
+ARCHITECTURE DIAGRAM
+====================
+
+    ┌─────────────────────────────────────────────┐
+    │         Docker Compose Environment          │
+    │                                             │
+    │  ┌────────────────┐    ┌─────────────────┐ │
+    │  │                │    │                 │ │
+    │  │  FastAPI       │───▶│  Ollama         │ │
+    │  │  (Port 8000)   │    │  (Port 11434)   │ │
+    │  │                │◀───│                 │ │
+    │  │  • /query      │    │  • Mistral      │ │
+    │  │  • /health     │    │  • Local LLM    │ │
+    │  │  • /docs       │    │                 │ │
+    │  │                │    │                 │ │
+    │  └────────────────┘    └─────────────────┘ │
+    │         ▲                      ▲            │
+    │         │                      │            │
+    │    [agent_network]    [ollama_models]      │
+    │                                             │
+    └─────────────────────────────────────────────┘
+              ▲
+              │
+         [HTTP Requests]
+              │
+        ┌─────┴──────┐
+        │   Clients  │
+        └────────────┘
+
+KEY COMPONENTS
+==============
+
+1. LLM Client (llm_client.py)
+   • Communicates with Ollama API
+   • Automatic retry with exponential backoff
+   • Health check functionality
+   • Timeout handling
+
+2. Agent Core (agent_core.py)
+   • Processes user queries
+   • Applies IT/cybersecurity context
+   • Custom context support
+   • Error handling & logging
+
+3. FastAPI Server (server.py)
+   • RESTful API endpoints
+   • Request/response validation
+   • Health monitoring
+   • Interactive docs (Swagger/ReDoc)
+
+4. Configuration (config.py)
+   • Centralized settings
+   • Environment variable support
+   • Default values
+   • Type-safe configuration
+
+QUICK COMMANDS
+==============
+
+Setup:      ./setup.sh
+Test:       ./test_agent.sh
+Start:      docker-compose up -d
+Stop:       docker-compose down
+Logs:       docker-compose logs -f
+Health:     curl http://localhost:8000/health
+
+API ENDPOINTS
+=============
+
+GET  /                 Service info
+GET  /health           Health check
+POST /query            Process query (default context)
+POST /query/custom     Process query (custom context)
+GET  /docs             Swagger UI
+GET  /redoc            ReDoc UI
+
+ENVIRONMENT VARIABLES
+=====================
+
+OLLAMA_HOST            Ollama hostname (default: ollama)
+OLLAMA_PORT            Ollama port (default: 11434)
+OLLAMA_MODEL           Model name (default: mistral)
+OLLAMA_TIMEOUT         Request timeout (default: 120s)
+API_HOST               API bind address (default: 0.0.0.0)
+API_PORT               API port (default: 8000)
+MAX_RETRIES            Max retry attempts (default: 3)
+RETRY_DELAY            Retry delay (default: 2s)
+
+DEPLOYMENT STATUS
+=================
+
+✅ Code:               Complete
+✅ Tests:              Included
+✅ Documentation:      Comprehensive
+✅ Docker:             Ready
+✅ Security:           Hardened
+✅ Production-ready:   Yes
+
