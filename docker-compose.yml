@@ -73,12 +73,12 @@ services:
       db:
         condition: service_healthy
       agent:
-        condition: service_started
+        condition: service_healthy
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/cyber_events
       - AGENT_URL=http://agent:8000/evaluate-event
     volumes:
-      - ./backend:/app
+      - ./backend:/app/backend
     restart: unless-stopped
 
   # Ollama Model Puller (one-time init)
