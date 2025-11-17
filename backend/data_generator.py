@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, timedelta, date
 from typing import List
 from sqlalchemy.orm import Session
-from models import LoginEvent, FirewallLog, PatchLevel
+from .models import LoginEvent, FirewallLog, PatchLevel
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

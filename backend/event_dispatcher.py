@@ -5,7 +5,7 @@ import requests
 from typing import Dict, Any
 from datetime import datetime
 from sqlalchemy.orm import Session
-from models import LoginEvent, FirewallLog, PatchLevel, EventAnalysis
+from .models import LoginEvent, FirewallLog, PatchLevel, EventAnalysis
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -15,7 +15,10 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY . /app/backend/
+
+# Set Python path to find the backend module
+ENV PYTHONPATH=/app
 
 # Wait for database and run scheduler
-CMD ["python", "scheduler.py"]
+CMD ["python", "-m", "backend.scheduler"]

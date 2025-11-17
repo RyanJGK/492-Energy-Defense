@@ -3,9 +3,9 @@ import logging
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
-from database import SessionLocal, init_db
-from data_generator import DataGenerator
-from event_dispatcher import EventDispatcher
+from .database import SessionLocal, init_db
+from .data_generator import DataGenerator
+from .event_dispatcher import EventDispatcher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
