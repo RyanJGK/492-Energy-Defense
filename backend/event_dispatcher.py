@@ -2,16 +2,19 @@
 import os
 import logging
 import requests
-from typing import Dict, Any
+from typing import Dict, Any, List
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
 from .models import LoginEvent, FirewallLog, PatchLevel, EventAnalysis
+from .database import SessionLocal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 AGENT_URL = os.getenv("AGENT_URL", "http://agent:8000/evaluate-event")
 TIMEOUT = 30  # seconds
+MAX_WORKERS = int(os.getenv("DISPATCH_WORKERS", "10"))  # Concurrent dispatch threads
 
 
 class EventDispatcher:
@@ -110,6 +113,162 @@ class EventDispatcher:
         except Exception as e:
             logger.error(f"Unexpected error dispatching event {event_id}: {e}")
             return {"error": str(e)}
+    
+    def _send_event_with_session(self, payload: Dict[str, Any], event_type: str, event_id: int) -> Dict[str, Any]:
+        """Send event to agent and store analysis result with a dedicated session."""
+        db = SessionLocal()  # Create new session for this thread
+        try:
+            logger.info(f"Dispatching {event_type} event {event_id} to agent")
+            response = requests.post(AGENT_URL, json=payload, timeout=TIMEOUT)
+            response.raise_for_status()
+
+            result = response.json()
+            
+            # Validate response
+            if not all(k in result for k in ["event_type", "risk_score", "severity", "reasoning", "recommended_action"]):
+                logger.error(f"Invalid response format from agent: {result}")
+                return {"error": "Invalid response format"}
+
+            # Store analysis result
+            analysis = EventAnalysis(
+                event_type=event_type,
+                event_id=event_id,
+                risk_score=result["risk_score"],
+                severity=result["severity"],
+                reasoning=result["reasoning"],
+                recommended_action=result["recommended_action"],
+                analyzed_at=datetime.utcnow()
+            )
+            db.add(analysis)
+            db.commit()
+
+            logger.info(f"Event {event_id} analyzed: severity={result['severity']}, score={result['risk_score']}")
+            return result
+
+        except requests.exceptions.RequestException as e:
+            logger.error(f"Failed to dispatch event {event_id}: {e}")
+            return {"error": str(e)}
+        except Exception as e:
+            logger.error(f"Unexpected error dispatching event {event_id}: {e}")
+            return {"error": str(e)}
+        finally:
+            db.close()  # Always close the session
+
+    def dispatch_login_events_parallel(self, events: List[LoginEvent]) -> int:
+        """Dispatch multiple login events in parallel."""
+        # Convert events to dict to avoid lazy loading issues across threads
+        event_data = []
+        for event in events:
+            event_data.append({
+                'id': event.id,
+                'username': event.username,
+                'src_ip': event.src_ip,
+                'status': event.status,
+                'timestamp': event.timestamp.isoformat(),
+                'device_id': event.device_id,
+                'auth_method': event.auth_method,
+                'is_burst_failure': event.is_burst_failure,
+                'is_suspicious_ip': event.is_suspicious_ip,
+                'is_admin': event.is_admin
+            })
+        
+        successful = 0
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {executor.submit(self._dispatch_login_with_session, data): data for data in event_data}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if "error" not in result:
+                        successful += 1
+                except Exception as e:
+                    data = futures[future]
+                    logger.error(f"Error dispatching login event {data['id']}: {e}")
+        return successful
+    
+    def _dispatch_login_with_session(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Dispatch a login event with its own database session."""
+        payload = {
+            "type": "login",
+            "data": event_data
+        }
+        return self._send_event_with_session(payload, "login", event_data['id'])
+
+    def dispatch_firewall_events_parallel(self, events: List[FirewallLog]) -> int:
+        """Dispatch multiple firewall events in parallel."""
+        # Convert events to dict to avoid lazy loading issues across threads
+        event_data = []
+        for event in events:
+            event_data.append({
+                'id': event.id,
+                'src_ip': event.src_ip,
+                'dst_ip': event.dst_ip,
+                'action': event.action,
+                'port': event.port,
+                'protocol': event.protocol,
+                'timestamp': event.timestamp.isoformat(),
+                'is_port_scan': event.is_port_scan,
+                'is_lateral_movement': event.is_lateral_movement,
+                'is_malicious_range': event.is_malicious_range,
+                'is_connection_spike': event.is_connection_spike
+            })
+        
+        successful = 0
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {executor.submit(self._dispatch_firewall_with_session, data): data for data in event_data}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if "error" not in result:
+                        successful += 1
+                except Exception as e:
+                    data = futures[future]
+                    logger.error(f"Error dispatching firewall event {data['id']}: {e}")
+        return successful
+    
+    def _dispatch_firewall_with_session(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Dispatch a firewall event with its own database session."""
+        payload = {
+            "type": "firewall",
+            "data": event_data
+        }
+        return self._send_event_with_session(payload, "firewall", event_data['id'])
+
+    def dispatch_patch_events_parallel(self, events: List[PatchLevel]) -> int:
+        """Dispatch multiple patch events in parallel."""
+        # Convert events to dict to avoid lazy loading issues across threads
+        event_data = []
+        for event in events:
+            event_data.append({
+                'id': event.id,
+                'device_id': event.device_id,
+                'os': event.os,
+                'last_patch_date': event.last_patch_date.isoformat(),
+                'missing_critical': event.missing_critical,
+                'missing_high': event.missing_high,
+                'update_failures': event.update_failures,
+                'is_unsupported': event.is_unsupported
+            })
+        
+        successful = 0
+        with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+            futures = {executor.submit(self._dispatch_patch_with_session, data): data for data in event_data}
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                    if "error" not in result:
+                        successful += 1
+                except Exception as e:
+                    data = futures[future]
+                    logger.error(f"Error dispatching patch event {data['id']}: {e}")
+        return successful
+    
+    def _dispatch_patch_with_session(self, event_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Dispatch a patch event with its own database session."""
+        payload = {
+            "type": "patch",
+            "data": event_data
+        }
+        return self._send_event_with_session(payload, "patch", event_data['id'])
 
     def dispatch_all_pending(self):
         """Dispatch all events that haven't been analyzed yet."""

@@ -55,8 +55,8 @@ class DataGenerator:
         self.failed_login_tracker = {}  # Track failed logins per user
 
     def generate_login_events(self, db: Session) -> List[LoginEvent]:
-        """Generate 20-80 login events with realistic patterns."""
-        num_events = random.randint(20, 80)
+        """Generate 5-15 login events with realistic patterns (reduced for LLM processing)."""
+        num_events = random.randint(5, 15)
         events = []
 
         # Determine if we should inject a brute-force burst
@@ -125,7 +125,7 @@ class DataGenerator:
             brute_ip = random.choice(self.EXTERNAL_IPS)
             brute_device = random.choice(self.DEVICE_IDS)
 
-            for j in range(15):  # 15 rapid failed attempts
+            for j in range(5):  # 5 rapid failed attempts (reduced for LLM)
                 timestamp = datetime.now() - timedelta(minutes=random.randint(0, 10))
                 event = LoginEvent(
                     username=brute_user,
@@ -149,8 +149,8 @@ class DataGenerator:
         return events
 
     def generate_firewall_events(self, db: Session) -> List[FirewallLog]:
-        """Generate 100-300 firewall events with attack patterns."""
-        num_events = random.randint(100, 300)
+        """Generate 10-30 firewall events with attack patterns (reduced for LLM processing)."""
+        num_events = random.randint(10, 30)
         events = []
 
         # Determine if we should inject port scan
@@ -199,7 +199,7 @@ class DataGenerator:
             scanner_ip = random.choice(self.EXTERNAL_IPS)
             target_ip = random.choice(self.INTERNAL_IPS)
 
-            for port in range(20, 100):  # Scan ports 20-99
+            for port in range(20, 35):  # Scan ports 20-34 (reduced for LLM)
                 timestamp = datetime.now() - timedelta(seconds=random.randint(0, 300))
                 event = FirewallLog(
                     src_ip=scanner_ip,
@@ -224,13 +224,16 @@ class DataGenerator:
         return events
 
     def generate_patch_levels(self, db: Session) -> List[PatchLevel]:
-        """Generate or update patch level data for devices."""
+        """Generate or update patch level data for devices (reduced sample for LLM processing)."""
         events = []
 
         # Check existing devices
         existing_devices = {pl.device_id for pl in db.query(PatchLevel).all()}
 
-        for device_id in self.DEVICE_IDS:
+        # Only process a random sample of 8-12 devices per cycle (instead of all 52)
+        sampled_devices = random.sample(self.DEVICE_IDS, min(random.randint(8, 12), len(self.DEVICE_IDS)))
+        
+        for device_id in sampled_devices:
             if device_id in existing_devices:
                 # Update existing device (age patches)
                 device = db.query(PatchLevel).filter(PatchLevel.device_id == device_id).first()

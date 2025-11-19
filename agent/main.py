@@ -15,6 +15,7 @@ app = FastAPI(title="492-Energy-Defense Cyber Event Triage Agent")
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
+USE_LLM = os.getenv("USE_LLM", "true").lower() == "true"  # Enable LLM mode by default
 
 
 class EventData(BaseModel):
@@ -127,6 +128,38 @@ def extract_json_from_response(text: str) -> Dict[str, Any]:
     
     # If no valid JSON found, raise error
     raise ValueError("No valid JSON found in response")
+
+
+def analyze_event_with_llm(event_type: str, event_data: Dict[str, Any]) -> AnalysisResult:
+    """Analyze event using Ollama LLM."""
+    # Build the prompt with event data
+    event_json = json.dumps(event_data, indent=2)
+    
+    prompt = f"""{SYSTEM_PROMPT}
+
+EVENT TO ANALYZE:
+Type: {event_type}
+Data:
+{event_json}
+
+Analyze this event and respond with ONLY a JSON object following the exact format specified above."""
+
+    logger.info(f"Calling Ollama LLM for {event_type} event analysis...")
+    
+    # Call Ollama
+    response_text = call_ollama(prompt)
+    
+    # Extract JSON from response
+    result_dict = extract_json_from_response(response_text)
+    
+    # Validate and create AnalysisResult
+    return AnalysisResult(
+        event_type=result_dict.get("event_type", event_type),
+        risk_score=result_dict.get("risk_score", 0),
+        severity=result_dict.get("severity", "low"),
+        reasoning=result_dict.get("reasoning", "LLM analysis completed"),
+        recommended_action=result_dict.get("recommended_action", "Review event details")
+    )
 
 
 def analyze_login_event(data: Dict[str, Any]) -> AnalysisResult:
@@ -338,33 +371,62 @@ async def evaluate_event(event: Event) -> AnalysisResult:
     """
     Evaluate a cybersecurity event and return risk assessment.
     
-    Uses deterministic rule-based scoring for fast, consistent analysis.
+    Mode determined by USE_LLM environment variable:
+    - USE_LLM=true: Uses Ollama/Mistral LLM for intelligent analysis
+    - USE_LLM=false: Uses deterministic rule-based scoring
     """
-    logger.info(f"Received {event.type} event for analysis")
+    logger.info(f"Received {event.type} event for analysis (LLM mode: {USE_LLM})")
 
     try:
-        # Use deterministic analysis for speed and consistency
-        if event.type == "login":
-            result = analyze_login_event(event.data)
-        elif event.type == "firewall":
-            result = analyze_firewall_event(event.data)
-        elif event.type == "patch":
-            result = analyze_patch_event(event.data)
+        if USE_LLM:
+            # Use LLM for intelligent analysis
+            logger.info("Using LLM-based analysis...")
+            result = analyze_event_with_llm(event.type, event.data)
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown event type: {event.type}")
+            # Use deterministic rule-based analysis
+            logger.info("Using rule-based analysis...")
+            if event.type == "login":
+                result = analyze_login_event(event.data)
+            elif event.type == "firewall":
+                result = analyze_firewall_event(event.data)
+            elif event.type == "patch":
+                result = analyze_patch_event(event.data)
+            else:
+                raise HTTPException(status_code=400, detail=f"Unknown event type: {event.type}")
 
         logger.info(f"Analysis complete: {result.severity} severity, score {result.risk_score}")
         return result
 
     except Exception as e:
         logger.error(f"Analysis error: {e}", exc_info=True)
+        # Fallback to rule-based if LLM fails
+        if USE_LLM:
+            logger.warning("LLM analysis failed, falling back to rule-based analysis")
+            try:
+                if event.type == "login":
+                    result = analyze_login_event(event.data)
+                elif event.type == "firewall":
+                    result = analyze_firewall_event(event.data)
+                elif event.type == "patch":
+                    result = analyze_patch_event(event.data)
+                else:
+                    raise HTTPException(status_code=400, detail=f"Unknown event type: {event.type}")
+                return result
+            except:
+                pass
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "service": "492-Energy-Defense Cyber Event Triage Agent"}
+    return {
+        "status": "healthy", 
+        "service": "492-Energy-Defense Cyber Event Triage Agent",
+        "mode": "LLM" if USE_LLM else "Rule-based",
+        "ollama_url": OLLAMA_URL if USE_LLM else "N/A",
+        "model": OLLAMA_MODEL if USE_LLM else "N/A"
+    }
 
 
 @app.get("/")
@@ -372,8 +434,10 @@ async def root():
     """Root endpoint."""
     return {
         "service": "492-Energy-Defense Cyber Event Triage Agent",
-        "version": "1.0.0",
-        "status": "operational"
+        "version": "2.0.0",
+        "status": "operational",
+        "analysis_mode": "LLM-powered" if USE_LLM else "Rule-based",
+        "llm_model": OLLAMA_MODEL if USE_LLM else None
     }
 
 

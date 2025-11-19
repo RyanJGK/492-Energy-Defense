@@ -54,6 +54,7 @@ services:
     environment:
       - OLLAMA_URL=http://ollama:11434/api/generate
       - OLLAMA_MODEL=mistral
+      - USE_LLM=true  # Enable LLM mode (set to false for rule-based)
     ports:
       - "8000:8000"
     healthcheck:
