@@ -76,7 +76,7 @@
             const container = document.getElementById('case-container');
 
             try {
-                const response = await fetch('/api/alerts?limit=20');
+                const response = await fetch('/api/alerts?limit=50');
                 const alerts = await response.json();
 
                 if (alerts.length === 0) {
@@ -84,10 +84,11 @@
                     return;
                 }
 
-                container.innerHTML = '<h2>Recent Cases</h2>';
+                container.innerHTML = '<h2>Recent Cases (Sorted by Severity)</h2>';
                 const grid = document.createElement('div');
                 grid.className = 'cases-grid';
 
+                // Alerts are already sorted by severity from API
                 alerts.forEach(alert => {
                     const card = createCaseCard(alert);
                     grid.appendChild(card);
@@ -211,17 +212,151 @@
                             </div>
                         </div>
                         <div class="timeline-item">
-                            <div class="timeline-marker"></div>
+                            <div class="timeline-marker active"></div>
                             <div class="timeline-content">
                                 <strong>Status</strong>
-                                <p>Pending SOC Review</p>
+                                <p>Pending Analyst Review</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="case-section">
+                    <h2>✅ Analyst Review</h2>
+                    <div class="feedback-form">
+                        <p class="feedback-intro">Review this alert and provide feedback to improve future analysis:</p>
+                        
+                        <div class="feedback-actions">
+                            <button class="feedback-btn btn-whitelist-ip" onclick="showWhitelistForm('ip', ${alert.id}, '${alert.event_details.src_ip || ''}')">
+                                ✓ Whitelist Source IP
+                            </button>
+                            <button class="feedback-btn btn-whitelist-user" onclick="showWhitelistForm('user', ${alert.id}, '${alert.event_details.username || ''}')">
+                                ✓ Whitelist User
+                            </button>
+                            <button class="feedback-btn btn-false-positive" onclick="submitFeedback(${alert.id}, 'false_positive')">
+                                ⚠️ Mark False Positive
+                            </button>
+                            <button class="feedback-btn btn-confirmed" onclick="submitFeedback(${alert.id}, 'confirmed_threat')">
+                                🚨 Confirm Threat
+                            </button>
+                        </div>
+
+                        <div id="whitelist-form-${alert.id}" class="whitelist-form" style="display: none;">
+                            <h3 id="whitelist-title-${alert.id}">Whitelist Details</h3>
+                            <input type="text" id="whitelist-value-${alert.id}" class="whitelist-input" placeholder="Enter value to whitelist">
+                            <textarea id="feedback-notes-${alert.id}" class="feedback-notes" placeholder="Add notes about why this should be whitelisted (e.g., 'New team member', 'Known safe system')..." rows="3"></textarea>
+                            <div class="whitelist-actions">
+                                <button class="btn btn-primary" onclick="submitWhitelist(${alert.id})">Submit Whitelist</button>
+                                <button class="btn btn-secondary" onclick="cancelWhitelist(${alert.id})">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div id="feedback-result-${alert.id}" class="feedback-result" style="display: none;"></div>
                     </div>
                 </div>
             `;
 
             return container;
+        }
+
+        let currentWhitelistType = null;
+
+        function showWhitelistForm(type, alertId, defaultValue) {
+            currentWhitelistType = type;
+            const form = document.getElementById(`whitelist-form-${alertId}`);
+            const title = document.getElementById(`whitelist-title-${alertId}`);
+            const input = document.getElementById(`whitelist-value-${alertId}`);
+            
+            if (type === 'ip') {
+                title.textContent = 'Whitelist IP Address';
+                input.placeholder = 'Enter IP address';
+                input.value = defaultValue || '';
+            } else if (type === 'user') {
+                title.textContent = 'Whitelist User';
+                input.placeholder = 'Enter username';
+                input.value = defaultValue || '';
+            }
+            
+            form.style.display = 'block';
+        }
+
+        function cancelWhitelist(alertId) {
+            const form = document.getElementById(`whitelist-form-${alertId}`);
+            form.style.display = 'none';
+            currentWhitelistType = null;
+        }
+
+        async function submitWhitelist(alertId) {
+            const value = document.getElementById(`whitelist-value-${alertId}`).value.trim();
+            const notes = document.getElementById(`feedback-notes-${alertId}`).value.trim();
+            
+            if (!value) {
+                alert('Please enter a value to whitelist');
+                return;
+            }
+            
+            const action = currentWhitelistType === 'ip' ? 'whitelist_ip' : 'whitelist_user';
+            await submitFeedback(alertId, action, notes, value);
+        }
+
+        async function submitFeedback(alertId, action, notes = '', whitelistValue = null) {
+            const resultDiv = document.getElementById(`feedback-result-${alertId}`);
+            
+            try {
+                // Show loading
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'feedback-result loading';
+                resultDiv.innerHTML = '⏳ Submitting feedback...';
+                
+                const payload = {
+                    alert_id: alertId,
+                    action: action,
+                    notes: notes || `Analyst reviewed and marked as: ${action}`,
+                    whitelist_value: whitelistValue
+                };
+                
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'feedback-result success';
+                    let message = '✅ Feedback submitted successfully!';
+                    
+                    if (action === 'whitelist_ip') {
+                        message = `✅ IP address "${whitelistValue}" has been whitelisted. Future events from this IP will be flagged accordingly.`;
+                    } else if (action === 'whitelist_user') {
+                        message = `✅ User "${whitelistValue}" has been whitelisted. Future events from this user will be flagged accordingly.`;
+                    } else if (action === 'false_positive') {
+                        message = '✅ Alert marked as false positive. This will help improve future analysis.';
+                    } else if (action === 'confirmed_threat') {
+                        message = '✅ Threat confirmed. Event logged for security tracking.';
+                    }
+                    
+                    resultDiv.innerHTML = message;
+                    
+                    // Hide form if it was shown
+                    const form = document.getElementById(`whitelist-form-${alertId}`);
+                    if (form) {
+                        form.style.display = 'none';
+                    }
+                    
+                    // Hide feedback buttons
+                    document.querySelector('.feedback-actions').style.display = 'none';
+                } else {
+                    throw new Error(result.detail || 'Failed to submit feedback');
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                resultDiv.className = 'feedback-result error';
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
         }
 
         function formatDetailedEventInfo(eventType, details) {

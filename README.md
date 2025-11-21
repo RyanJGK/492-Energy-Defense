@@ -2,18 +2,19 @@
 
 A Dockerized local IT-security simulation system for educational purposes. This project simulates real-world cybersecurity events and uses an AI agent (Ollama Mistral) to analyze and triage security incidents in real-time.
 
-## 🆕 NEW: Security Dashboard
+## 🆕 NEW: Security Dashboard with Analyst Review
 
 **View your security alerts in a modern web interface!**
 
 Access the dashboard at **http://localhost:3000** after starting the system.
 
-- 🚨 **Alerts & Anomalies**: Real-time security event monitoring
-- 📋 **Case Review**: Detailed incident analysis
+- 🚨 **Alerts & Anomalies**: Real-time security event monitoring (sorted by severity)
+- 📋 **Case Review**: Detailed incident analysis with feedback capabilities
+- ✅ **Analyst Review**: Whitelist IPs/users, mark false positives, confirm threats
 - 📊 **Statistics**: Live metrics and severity tracking
 - 🎨 **Modern UI**: Energy-dashboard inspired design
 
-[Quick Start Guide](DASHBOARD_QUICKSTART.md) | [Full Documentation](DASHBOARD_README.md)
+[Quick Start Guide](DASHBOARD_QUICKSTART.md) | [Full Documentation](DASHBOARD_README.md) | [Latest Updates](DASHBOARD_UPDATES.md)
 
 ## 🏗️ Architecture
 

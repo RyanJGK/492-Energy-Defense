@@ -13,7 +13,11 @@ import sys
 
 # Add parent directory to path to import models
 sys.path.append('/app')
-from backend.models import LoginEvent, FirewallLog, PatchLevel, EventAnalysis, Base
+from backend.models import (
+    LoginEvent, FirewallLog, PatchLevel, EventAnalysis, 
+    AnalystFeedback as AnalystFeedbackModel,
+    WhitelistedIP, WhitelistedUser, Base
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -24,6 +28,21 @@ app = FastAPI(title="492-Energy-Defense Security Dashboard")
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@db:5432/cyber_events")
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Initialize feedback tables on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database tables on startup."""
+    try:
+        # Create feedback and whitelist tables if they don't exist
+        Base.metadata.create_all(bind=engine, tables=[
+            AnalystFeedbackModel.__table__,
+            WhitelistedIP.__table__,
+            WhitelistedUser.__table__
+        ])
+        logger.info("✅ Feedback and whitelist tables initialized")
+    except Exception as e:
+        logger.error(f"❌ Error initializing tables: {e}")
 
 
 def get_db():
@@ -56,6 +75,14 @@ class DashboardStats(BaseModel):
     low_alerts: int
     events_last_24h: int
     avg_risk_score: float
+
+
+class AnalystFeedback(BaseModel):
+    """Analyst feedback for event review."""
+    alert_id: int
+    action: str  # 'whitelist_ip', 'whitelist_user', 'confirmed_threat', 'false_positive'
+    notes: str
+    whitelist_value: Optional[str] = None  # IP address or username to whitelist
 
 
 @app.get("/")
@@ -108,7 +135,7 @@ async def get_alerts(
     event_type: Optional[str] = Query(None, description="Filter by event type"),
     limit: int = Query(100, description="Maximum number of alerts to return")
 ):
-    """Get alerts/anomalies with optional filters."""
+    """Get alerts/anomalies with optional filters, sorted by severity."""
     db = next(get_db())
     
     try:
@@ -120,8 +147,12 @@ async def get_alerts(
         if event_type:
             query = query.filter(EventAnalysis.event_type == event_type)
         
-        # Get most recent alerts
-        analyses = query.order_by(desc(EventAnalysis.analyzed_at)).limit(limit).all()
+        # Get alerts and sort by severity (critical first) then by time
+        analyses = query.order_by(desc(EventAnalysis.analyzed_at)).limit(limit * 2).all()
+        
+        # Sort by severity priority: critical > high > medium > low
+        severity_order = {'critical': 0, 'high': 1, 'medium': 2, 'low': 3}
+        analyses = sorted(analyses, key=lambda x: (severity_order.get(x.severity, 4), -x.analyzed_at.timestamp()))[:limit]
         
         # Enrich with event details
         results = []
@@ -258,6 +289,83 @@ async def get_alert_details(alert_id: int):
         raise
     except Exception as e:
         logger.error(f"Error fetching alert details: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/feedback")
+async def submit_feedback(feedback: AnalystFeedback):
+    """Submit analyst feedback for an alert."""
+    db = next(get_db())
+    
+    try:
+        # Verify alert exists
+        analysis = db.query(EventAnalysis).filter(EventAnalysis.id == feedback.alert_id).first()
+        if not analysis:
+            raise HTTPException(status_code=404, detail="Alert not found")
+        
+        # Store the feedback
+        feedback_record = AnalystFeedbackModel(
+            alert_id=feedback.alert_id,
+            action=feedback.action,
+            notes=feedback.notes,
+            whitelist_value=feedback.whitelist_value,
+            reviewed_by="analyst",
+            reviewed_at=datetime.utcnow()
+        )
+        db.add(feedback_record)
+        
+        # Handle whitelist actions
+        if feedback.action == "whitelist_ip" and feedback.whitelist_value:
+            # Check if already whitelisted
+            existing = db.query(WhitelistedIP).filter(
+                WhitelistedIP.ip_address == feedback.whitelist_value
+            ).first()
+            
+            if not existing:
+                whitelist_entry = WhitelistedIP(
+                    ip_address=feedback.whitelist_value,
+                    reason=feedback.notes or "Analyst approved",
+                    added_by="analyst"
+                )
+                db.add(whitelist_entry)
+                logger.info(f"Added IP {feedback.whitelist_value} to whitelist")
+            else:
+                logger.info(f"IP {feedback.whitelist_value} already whitelisted")
+        
+        elif feedback.action == "whitelist_user" and feedback.whitelist_value:
+            # Check if already whitelisted
+            existing = db.query(WhitelistedUser).filter(
+                WhitelistedUser.username == feedback.whitelist_value
+            ).first()
+            
+            if not existing:
+                whitelist_entry = WhitelistedUser(
+                    username=feedback.whitelist_value,
+                    reason=feedback.notes or "Analyst approved",
+                    added_by="analyst"
+                )
+                db.add(whitelist_entry)
+                logger.info(f"Added user {feedback.whitelist_value} to whitelist")
+            else:
+                logger.info(f"User {feedback.whitelist_value} already whitelisted")
+        
+        # Commit all changes
+        db.commit()
+        
+        logger.info(f"Analyst feedback stored for alert {feedback.alert_id}: {feedback.action}")
+        
+        return {
+            "status": "success",
+            "message": "Feedback submitted successfully",
+            "alert_id": feedback.alert_id,
+            "action": feedback.action,
+            "whitelist_value": feedback.whitelist_value
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error submitting feedback: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -64,3 +64,38 @@ class EventAnalysis(Base):
     reasoning = Column(Text, nullable=False)
     recommended_action = Column(Text, nullable=False)
     analyzed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class AnalystFeedback(Base):
+    """Store analyst feedback for event reviews."""
+    __tablename__ = "analyst_feedback"
+
+    id = Column(Integer, primary_key=True, index=True)
+    alert_id = Column(Integer, nullable=False)
+    action = Column(String(50), nullable=False)  # whitelist_ip, whitelist_user, confirmed_threat, false_positive
+    notes = Column(Text, nullable=True)
+    whitelist_value = Column(String(255), nullable=True)  # IP or username whitelisted
+    reviewed_by = Column(String(100), default="analyst", nullable=False)
+    reviewed_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class WhitelistedIP(Base):
+    """Store whitelisted IP addresses."""
+    __tablename__ = "whitelisted_ips"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ip_address = Column(String(45), unique=True, nullable=False, index=True)
+    reason = Column(Text, nullable=True)
+    added_by = Column(String(100), default="analyst", nullable=False)
+    added_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class WhitelistedUser(Base):
+    """Store whitelisted usernames."""
+    __tablename__ = "whitelisted_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(255), unique=True, nullable=False, index=True)
+    reason = Column(Text, nullable=True)
+    added_by = Column(String(100), default="analyst", nullable=False)
+    added_at = Column(DateTime, default=datetime.utcnow, nullable=False)
