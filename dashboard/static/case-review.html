@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Case Review - 492-Energy-Defense Security Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>🛡️ Energy Defense</h2>
+                <p class="subtitle">Security Operations Center</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="/" class="nav-item">
+                    <span class="nav-icon">🚨</span>
+                    <span>Alerts & Anomalies</span>
+                </a>
+                <a href="/static/case-review.html" class="nav-item active">
+                    <span class="nav-icon">📋</span>
+                    <span>Case Review</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <p class="small-text">492-Energy-Defense</p>
+                <p class="small-text">v2.0.0</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="header">
+                <h1>Case Review</h1>
+                <div class="header-actions">
+                    <button class="btn btn-back" onclick="window.history.back()">← Back to Alerts</button>
+                </div>
+            </header>
+
+            <!-- Case Details -->
+            <section id="case-container" class="case-container">
+                <div class="loading">Loading case details...</div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        async function loadCaseDetails() {
+            const params = new URLSearchParams(window.location.search);
+            const alertId = params.get('id');
+
+            if (!alertId) {
+                await loadAllCases();
+                return;
+            }
+
+            const container = document.getElementById('case-container');
+
+            try {
+                const response = await fetch(`/api/alert/${alertId}`);
+                if (!response.ok) throw new Error('Alert not found');
+                
+                const alert = await response.json();
+                container.innerHTML = '';
+                container.appendChild(createCaseDetailView(alert));
+                
+                // Check if this alert has been reviewed and update timeline
+                await checkReviewStatus(alertId);
+            } catch (error) {
+                console.error('Error loading case:', error);
+                container.innerHTML = '<div class="error">Error loading case details. Please try again.</div>';
+            }
+        }
+
+        async function checkReviewStatus(alertId) {
+            try {
+                const response = await fetch(`/api/alert/${alertId}/feedback`);
+                if (response.ok) {
+                    const feedback = await response.json();
+                    if (feedback && feedback.length > 0) {
+                        // Get the most recent feedback
+                        const latest = feedback[0];
+                        let statusText = 'Reviewed by Analyst';
+                        
+                        if (latest.action === 'whitelist_ip') {
+                            statusText = 'Reviewed: IP Whitelisted';
+                        } else if (latest.action === 'whitelist_user') {
+                            statusText = 'Reviewed: User Whitelisted';
+                        } else if (latest.action === 'false_positive') {
+                            statusText = 'Reviewed: False Positive';
+                        } else if (latest.action === 'confirmed_threat') {
+                            statusText = 'Reviewed: Threat Confirmed';
+                        }
+                        
+                        updateTimelineStatus(alertId, statusText);
+                        
+                        // Hide action buttons since already reviewed
+                        const actionsDiv = document.querySelector('.feedback-actions');
+                        if (actionsDiv) {
+                            actionsDiv.style.display = 'none';
+                        }
+                        
+                        // Show review info
+                        const resultDiv = document.getElementById(`feedback-result-${alertId}`);
+                        if (resultDiv) {
+                            resultDiv.style.display = 'block';
+                            resultDiv.className = 'feedback-result success';
+                            resultDiv.innerHTML = `✅ Previously reviewed as: ${latest.action.replace('_', ' ')}<br><small>Notes: ${latest.notes || 'None'}</small>`;
+                        }
+                    }
+                }
+            } catch (error) {
+                // No feedback yet, which is fine
+                console.log('No previous feedback found');
+            }
+        }
+
+        async function loadAllCases() {
+            const container = document.getElementById('case-container');
+
+            try {
+                const response = await fetch('/api/alerts?limit=50');
+                const alerts = await response.json();
+
+                if (alerts.length === 0) {
+                    container.innerHTML = '<div class="no-data">No cases available for review</div>';
+                    return;
+                }
+
+                container.innerHTML = '<h2>Recent Cases (Sorted by Severity)</h2>';
+                const grid = document.createElement('div');
+                grid.className = 'cases-grid';
+
+                // Alerts are already sorted by severity from API
+                alerts.forEach(alert => {
+                    const card = createCaseCard(alert);
+                    grid.appendChild(card);
+                });
+
+                container.appendChild(grid);
+            } catch (error) {
+                console.error('Error loading cases:', error);
+                container.innerHTML = '<div class="error">Error loading cases. Please try again.</div>';
+            }
+        }
+
+        function createCaseCard(alert) {
+            const card = document.createElement('div');
+            card.className = `case-card severity-${alert.severity}`;
+            
+            const eventTypeIcon = {
+                'login': '🔐',
+                'firewall': '🔥',
+                'patch': '🛡️'
+            };
+
+            const timestamp = new Date(alert.analyzed_at);
+
+            card.innerHTML = `
+                <div class="case-card-header">
+                    <span class="case-icon">${eventTypeIcon[alert.event_type]}</span>
+                    <h3>Case #${alert.id}</h3>
+                    <span class="badge badge-${alert.severity}">${alert.severity.toUpperCase()}</span>
+                </div>
+                <div class="case-card-body">
+                    <p><strong>Type:</strong> ${alert.event_type}</p>
+                    <p><strong>Risk Score:</strong> ${alert.risk_score}</p>
+                    <p><strong>Date:</strong> ${timestamp.toLocaleString()}</p>
+                </div>
+                <button class="btn btn-primary" onclick="window.location.href='/static/case-review.html?id=${alert.id}'">
+                    Review Case →
+                </button>
+            `;
+
+            return card;
+        }
+
+        function createCaseDetailView(alert) {
+            const container = document.createElement('div');
+            container.className = 'case-detail';
+
+            const eventTypeIcon = {
+                'login': '🔐',
+                'firewall': '🔥',
+                'patch': '🛡️'
+            };
+
+            const timestamp = new Date(alert.analyzed_at);
+
+            container.innerHTML = `
+                <div class="case-header-large">
+                    <div class="case-header-left">
+                        <span class="case-icon-large">${eventTypeIcon[alert.event_type]}</span>
+                        <div>
+                            <h1>Case #${alert.id}</h1>
+                            <p class="case-subtitle">${alert.event_type.toUpperCase()} Event Analysis</p>
+                        </div>
+                    </div>
+                    <span class="badge-large badge-${alert.severity}">${alert.severity.toUpperCase()}</span>
+                </div>
+
+                <div class="case-metrics">
+                    <div class="metric-card">
+                        <div class="metric-value">${alert.risk_score}</div>
+                        <div class="metric-label">Risk Score</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${alert.severity}</div>
+                        <div class="metric-label">Severity Level</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${timestamp.toLocaleDateString()}</div>
+                        <div class="metric-label">Date Analyzed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${timestamp.toLocaleTimeString()}</div>
+                        <div class="metric-label">Time</div>
+                    </div>
+                </div>
+
+                <div class="case-section">
+                    <h2>🔍 Analysis Summary</h2>
+                    <div class="analysis-box">
+                        ${alert.reasoning}
+                    </div>
+                </div>
+
+                <div class="case-section">
+                    <h2>⚡ Recommended Action</h2>
+                    <div class="action-box ${alert.severity === 'critical' || alert.severity === 'high' ? 'urgent' : ''}">
+                        ${alert.recommended_action}
+                    </div>
+                </div>
+
+                <div class="case-section">
+                    <h2>📊 Event Details</h2>
+                    ${formatDetailedEventInfo(alert.event_type, alert.event_details)}
+                </div>
+
+                <div class="case-section">
+                    <h2>📝 Timeline</h2>
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Event Occurred</strong>
+                                <p>${alert.event_details.timestamp ? new Date(alert.event_details.timestamp).toLocaleString() : 'N/A'}</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <strong>Analyzed by AI Agent</strong>
+                                <p>${timestamp.toLocaleString()}</p>
+                            </div>
+                        </div>
+                        <div class="timeline-item" id="timeline-status-${alert.id}">
+                            <div class="timeline-marker active"></div>
+                            <div class="timeline-content">
+                                <strong>Status</strong>
+                                <p id="timeline-status-text-${alert.id}">Pending Analyst Review</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="case-section">
+                    <h2>✅ Analyst Review</h2>
+                    <div class="feedback-form">
+                        <p class="feedback-intro">Review this alert and provide feedback to improve future analysis:</p>
+                        
+                        <div class="feedback-actions">
+                            <button class="feedback-btn btn-whitelist-ip" onclick="showFeedbackForm('whitelist_ip', ${alert.id}, '${alert.event_details.src_ip || ''}')">
+                                ✓ Whitelist Source IP
+                            </button>
+                            <button class="feedback-btn btn-whitelist-user" onclick="showFeedbackForm('whitelist_user', ${alert.id}, '${alert.event_details.username || ''}')">
+                                ✓ Whitelist User
+                            </button>
+                            <button class="feedback-btn btn-false-positive" onclick="showFeedbackForm('false_positive', ${alert.id})">
+                                ⚠️ Mark False Positive
+                            </button>
+                            <button class="feedback-btn btn-confirmed" onclick="showFeedbackForm('confirmed_threat', ${alert.id})">
+                                🚨 Confirm Threat
+                            </button>
+                        </div>
+
+                        <div id="feedback-form-${alert.id}" class="feedback-form-container" style="display: none;">
+                            <h3 id="feedback-form-title-${alert.id}">Feedback Details</h3>
+                            <div id="feedback-value-container-${alert.id}" style="display: none;">
+                                <input type="text" id="feedback-value-${alert.id}" class="whitelist-input" placeholder="Enter value">
+                            </div>
+                            <textarea id="feedback-form-notes-${alert.id}" class="feedback-notes" placeholder="Add notes about your decision..." rows="3"></textarea>
+                            <div class="whitelist-actions">
+                                <button class="btn btn-primary" onclick="submitFeedbackForm(${alert.id})">Submit Feedback</button>
+                                <button class="btn btn-secondary" onclick="cancelFeedbackForm(${alert.id})">Cancel</button>
+                            </div>
+                        </div>
+
+                        <div id="feedback-result-${alert.id}" class="feedback-result" style="display: none;"></div>
+                    </div>
+                </div>
+            `;
+
+            return container;
+        }
+
+        let currentFeedbackType = null;
+
+        function showFeedbackForm(type, alertId, defaultValue = '') {
+            currentFeedbackType = type;
+            const form = document.getElementById(`feedback-form-${alertId}`);
+            const title = document.getElementById(`feedback-form-title-${alertId}`);
+            const valueContainer = document.getElementById(`feedback-value-container-${alertId}`);
+            const input = document.getElementById(`feedback-value-${alertId}`);
+            const notesArea = document.getElementById(`feedback-form-notes-${alertId}`);
+            
+            // Configure form based on action type
+            if (type === 'whitelist_ip') {
+                title.textContent = 'Whitelist IP Address';
+                input.placeholder = 'Enter IP address';
+                input.value = defaultValue || '';
+                valueContainer.style.display = 'block';
+                notesArea.placeholder = 'Add notes about why this IP should be whitelisted (e.g., "New team member", "Known safe system")...';
+            } else if (type === 'whitelist_user') {
+                title.textContent = 'Whitelist User';
+                input.placeholder = 'Enter username';
+                input.value = defaultValue || '';
+                valueContainer.style.display = 'block';
+                notesArea.placeholder = 'Add notes about why this user should be whitelisted (e.g., "New employee", "Authorized administrator")...';
+            } else if (type === 'false_positive') {
+                title.textContent = 'Mark as False Positive';
+                valueContainer.style.display = 'none';
+                notesArea.placeholder = 'Explain why this is a false positive (e.g., "Legitimate testing", "Known system behavior", "Incorrect threshold")...';
+            } else if (type === 'confirmed_threat') {
+                title.textContent = 'Confirm Threat';
+                valueContainer.style.display = 'none';
+                notesArea.placeholder = 'Add notes about the threat (e.g., "Verified malicious activity", "Action taken: blocked at firewall", "Escalated to security team")...';
+            }
+            
+            form.style.display = 'block';
+            notesArea.focus();
+        }
+
+        function cancelFeedbackForm(alertId) {
+            const form = document.getElementById(`feedback-form-${alertId}`);
+            const notesArea = document.getElementById(`feedback-form-notes-${alertId}`);
+            form.style.display = 'none';
+            notesArea.value = '';
+            currentFeedbackType = null;
+        }
+
+        async function submitFeedbackForm(alertId) {
+            const notes = document.getElementById(`feedback-form-notes-${alertId}`).value.trim();
+            const valueContainer = document.getElementById(`feedback-value-container-${alertId}`);
+            let value = null;
+            
+            // Get value if it's a whitelist action
+            if (valueContainer.style.display !== 'none') {
+                value = document.getElementById(`feedback-value-${alertId}`).value.trim();
+                if (!value) {
+                    alert('Please enter a value to whitelist');
+                    return;
+                }
+            }
+            
+            if (!notes) {
+                alert('Please add notes explaining your decision');
+                return;
+            }
+            
+            await submitFeedback(alertId, currentFeedbackType, notes, value);
+        }
+
+        function updateTimelineStatus(alertId, statusText) {
+            const statusElement = document.getElementById(`timeline-status-text-${alertId}`);
+            const markerElement = document.querySelector(`#timeline-status-${alertId} .timeline-marker`);
+            
+            if (statusElement) {
+                statusElement.textContent = statusText;
+                statusElement.style.color = 'var(--low-green)';
+                statusElement.style.fontWeight = '600';
+            }
+            
+            if (markerElement) {
+                markerElement.classList.remove('active');
+                markerElement.style.background = 'var(--low-green)';
+            }
+        }
+
+        async function submitFeedback(alertId, action, notes = '', whitelistValue = null) {
+            const resultDiv = document.getElementById(`feedback-result-${alertId}`);
+            
+            try {
+                // Show loading
+                resultDiv.style.display = 'block';
+                resultDiv.className = 'feedback-result loading';
+                resultDiv.innerHTML = '⏳ Submitting feedback...';
+                
+                const payload = {
+                    alert_id: alertId,
+                    action: action,
+                    notes: notes || `Analyst reviewed and marked as: ${action}`,
+                    whitelist_value: whitelistValue
+                };
+                
+                const response = await fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'feedback-result success';
+                    let message = '✅ Feedback submitted successfully!';
+                    let statusText = 'Reviewed by Analyst';
+                    
+                    if (action === 'whitelist_ip') {
+                        message = `✅ IP address "${whitelistValue}" has been whitelisted. Future events from this IP will be flagged accordingly.`;
+                        statusText = 'Reviewed: IP Whitelisted';
+                    } else if (action === 'whitelist_user') {
+                        message = `✅ User "${whitelistValue}" has been whitelisted. Future events from this user will be flagged accordingly.`;
+                        statusText = 'Reviewed: User Whitelisted';
+                    } else if (action === 'false_positive') {
+                        message = '✅ Alert marked as false positive. This will help improve future analysis.';
+                        statusText = 'Reviewed: False Positive';
+                    } else if (action === 'confirmed_threat') {
+                        message = '✅ Threat confirmed. Event logged for security tracking.';
+                        statusText = 'Reviewed: Threat Confirmed';
+                    }
+                    
+                    resultDiv.innerHTML = message;
+                    
+                    // Hide form if it was shown
+                    const form = document.getElementById(`feedback-form-${alertId}`);
+                    if (form) {
+                        form.style.display = 'none';
+                    }
+                    
+                    // Hide feedback buttons
+                    document.querySelector('.feedback-actions').style.display = 'none';
+                    
+                    // Update timeline status
+                    updateTimelineStatus(alertId, statusText);
+                } else {
+                    throw new Error(result.detail || 'Failed to submit feedback');
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                resultDiv.className = 'feedback-result error';
+                resultDiv.innerHTML = `❌ Error: ${error.message}`;
+            }
+        }
+
+        function formatDetailedEventInfo(eventType, details) {
+            if (!details || Object.keys(details).length === 0) {
+                return '<div class="no-data">No detailed information available</div>';
+            }
+
+            let html = '<div class="details-grid">';
+
+            if (eventType === 'login') {
+                html += `
+                    <div class="detail-row">
+                        <span class="detail-label">Username:</span>
+                        <span class="detail-value">${details.username || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Source IP:</span>
+                        <span class="detail-value">${details.src_ip || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Authentication Status:</span>
+                        <span class="detail-value status-${details.status?.toLowerCase()}">${details.status || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Device ID:</span>
+                        <span class="detail-value">${details.device_id || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Auth Method:</span>
+                        <span class="detail-value">${details.auth_method || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Admin Account:</span>
+                        <span class="detail-value ${details.is_admin ? 'text-danger' : ''}">${details.is_admin ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Suspicious IP:</span>
+                        <span class="detail-value ${details.is_suspicious_ip ? 'text-danger' : ''}">${details.is_suspicious_ip ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Burst Failure:</span>
+                        <span class="detail-value ${details.is_burst_failure ? 'text-danger' : ''}">${details.is_burst_failure ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                `;
+            } else if (eventType === 'firewall') {
+                html += `
+                    <div class="detail-row">
+                        <span class="detail-label">Source IP:</span>
+                        <span class="detail-value">${details.src_ip || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Destination IP:</span>
+                        <span class="detail-value">${details.dst_ip || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Port:</span>
+                        <span class="detail-value">${details.port || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Protocol:</span>
+                        <span class="detail-value">${details.protocol || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Action:</span>
+                        <span class="detail-value action-${details.action?.toLowerCase()}">${details.action || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Port Scan:</span>
+                        <span class="detail-value ${details.is_port_scan ? 'text-danger' : ''}">${details.is_port_scan ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Lateral Movement:</span>
+                        <span class="detail-value ${details.is_lateral_movement ? 'text-danger' : ''}">${details.is_lateral_movement ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Malicious Range:</span>
+                        <span class="detail-value ${details.is_malicious_range ? 'text-danger' : ''}">${details.is_malicious_range ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Connection Spike:</span>
+                        <span class="detail-value ${details.is_connection_spike ? 'text-danger' : ''}">${details.is_connection_spike ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                `;
+            } else if (eventType === 'patch') {
+                html += `
+                    <div class="detail-row">
+                        <span class="detail-label">Device ID:</span>
+                        <span class="detail-value">${details.device_id || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Operating System:</span>
+                        <span class="detail-value">${details.os || 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Last Patch Date:</span>
+                        <span class="detail-value">${details.last_patch_date ? new Date(details.last_patch_date).toLocaleDateString() : 'N/A'}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Missing Critical Patches:</span>
+                        <span class="detail-value ${details.missing_critical > 0 ? 'text-danger' : ''}">${details.missing_critical || 0}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Missing High Patches:</span>
+                        <span class="detail-value ${details.missing_high > 0 ? 'text-warning' : ''}">${details.missing_high || 0}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Update Failures:</span>
+                        <span class="detail-value ${details.update_failures > 0 ? 'text-warning' : ''}">${details.update_failures || 0}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Unsupported OS:</span>
+                        <span class="detail-value ${details.is_unsupported ? 'text-danger' : ''}">${details.is_unsupported ? 'Yes ⚠️' : 'No'}</span>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        // Load case details on page load
+        loadCaseDetails();
+    </script>
+</body>
+</html>

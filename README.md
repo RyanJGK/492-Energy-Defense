@@ -2,6 +2,20 @@
 
 A Dockerized local IT-security simulation system for educational purposes. This project simulates real-world cybersecurity events and uses an AI agent (Ollama Mistral) to analyze and triage security incidents in real-time.
 
+## 🆕 NEW: Security Dashboard with Analyst Review
+
+**View your security alerts in a modern web interface!**
+
+Access the dashboard at **http://localhost:3000** after starting the system.
+
+- 🚨 **Alerts & Anomalies**: Real-time security event monitoring (sorted by severity)
+- 📋 **Case Review**: Detailed incident analysis with feedback capabilities
+- ✅ **Analyst Review**: Whitelist IPs/users, mark false positives, confirm threats
+- 📊 **Statistics**: Live metrics and severity tracking
+- 🎨 **Modern UI**: Energy-dashboard inspired design
+
+[Quick Start Guide](DASHBOARD_QUICKSTART.md) | [Full Documentation](DASHBOARD_README.md) | [Latest Updates](DASHBOARD_UPDATES.md)
+
 ## 🏗️ Architecture
 
 The system consists of two main components:
@@ -107,6 +121,11 @@ All services should show as "healthy" or "running".
 
 ### Accessing the Services
 
+- **Security Dashboard**: http://localhost:3000 🆕
+  - Modern web interface for viewing alerts and cases
+  - Real-time statistics and filtering
+  - See [DASHBOARD_QUICKSTART.md](DASHBOARD_QUICKSTART.md) for details
+
 - **AI Agent API**: http://localhost:8000
   - Health check: http://localhost:8000/health
   - API docs: http://localhost:8000/docs
@@ -134,8 +153,18 @@ workspace/
 │   ├── event_dispatcher.py   # Sends events to AI agent
 │   ├── scheduler.py           # APScheduler (runs every 30 min)
 │   └── requirements.txt
+├── dashboard/                  # Web Dashboard (NEW)
+│   ├── Dockerfile
+│   ├── main.py                # Dashboard API
+│   ├── requirements.txt
+│   └── static/
+│       ├── index.html         # Alerts & Anomalies page
+│       ├── case-review.html   # Case Review page
+│       └── styles.css         # Modern dark theme
 ├── docker-compose.yml         # Service orchestration
-└── README.md
+├── README.md
+├── DASHBOARD_README.md        # Dashboard documentation
+└── DASHBOARD_QUICKSTART.md    # Quick start guide
 ```
 
 ## 🔧 Configuration
@@ -151,6 +180,17 @@ workspace/
 - `OLLAMA_MODEL`: Model to use (default: `mistral`)
 
 ## 🔍 Monitoring Events
+
+### Web Dashboard (Recommended) 🆕
+
+The easiest way to view events is through the **Security Dashboard**:
+
+1. Open http://localhost:3000 in your browser
+2. View real-time alerts and statistics
+3. Filter by severity or event type
+4. Click any alert to see detailed analysis
+
+See [DASHBOARD_QUICKSTART.md](DASHBOARD_QUICKSTART.md) for details.
 
 ### View Database Events
 
@@ -179,6 +219,9 @@ docker logs -f cyber-backend
 
 # Agent logs (analysis results)
 docker logs -f cyber-agent
+
+# Dashboard logs
+docker logs -f cyber-dashboard
 
 # Ollama logs
 docker logs -f ollama-mistral
