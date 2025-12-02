@@ -10,7 +10,7 @@
 📦 PROJECT DELIVERABLES
 ─────────────────────────────────────────────────────────────────────
 
-✅ AI Agent (Ollama Mistral Integration)
+✅ AI Agent (Ollama Qwen Integration)
    • FastAPI application with event analysis
    • Deterministic risk scoring engine
    • Structured JSON outputs

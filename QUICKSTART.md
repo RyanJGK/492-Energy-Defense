@@ -6,7 +6,7 @@
 ```bash
 ./start.sh
 ```
-Wait 5-10 minutes for initial setup (Mistral model download).
+Wait 1-2 minutes for initial setup (Qwen model download).
 
 ### Step 2: Verify It's Working
 ```bash

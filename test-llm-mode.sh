@@ -40,12 +40,12 @@ echo -e "${YELLOW}[3/5] Checking if Ollama is accessible...${NC}"
 if curl -f -s http://localhost:11434/api/tags > /dev/null 2>&1; then
     echo -e "${GREEN}✓ Ollama is accessible${NC}"
     MODELS=$(curl -s http://localhost:11434/api/tags | jq -r '.models[].name')
-    if echo "$MODELS" | grep -q "mistral"; then
-        echo -e "${GREEN}✓ Mistral model is loaded${NC}"
+    if echo "$MODELS" | grep -q "qwen2.5:0.5b"; then
+        echo -e "${GREEN}✓ Qwen model is loaded${NC}"
     else
-        echo -e "${RED}✗ Mistral model not found${NC}"
+        echo -e "${RED}✗ Qwen model not found${NC}"
         echo "Available models: $MODELS"
-        echo "Run: docker exec ollama-mistral ollama pull mistral"
+        echo "Run: docker exec ollama-qwen ollama pull qwen2.5:0.5b"
     fi
 else
     echo -e "${RED}✗ Ollama is not responding${NC}"

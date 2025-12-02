@@ -5,7 +5,7 @@
 ### 1. Agent Modifications (`agent/main.py`)
 
 #### Added LLM Integration
-- **New function**: `analyze_event_with_llm()` - Uses Ollama/Mistral for event analysis
+- **New function**: `analyze_event_with_llm()` - Uses Ollama/Qwen for event analysis
 - **Environment variable**: `USE_LLM` - Toggle between LLM and rule-based modes
 - **Smart fallback**: If LLM fails, automatically falls back to rule-based analysis
 
@@ -96,7 +96,7 @@ curl http://localhost:8000/health
   "status": "healthy",
   "mode": "LLM",
   "ollama_url": "http://ollama:11434/api/generate",
-  "model": "mistral"
+  "model": "qwen2.5:0.5b"
 }
 ```
 
@@ -231,13 +231,13 @@ Events will generate again in 30 minutes, ensuring the LLM isn't overwhelmed.
 ERROR: Ollama API error: Connection refused
 ```
 
-**Fix**: Ensure Ollama is running and Mistral model is loaded
+**Fix**: Ensure Ollama is running and Qwen model is loaded
 ```bash
 # Check Ollama status
-docker logs ollama-mistral
+docker logs ollama-qwen
 
 # Pull model if needed
-docker exec ollama-mistral ollama pull mistral
+docker exec ollama-qwen ollama pull qwen2.5:0.5b
 ```
 
 ### LLM Too Slow
@@ -295,8 +295,8 @@ But monitor performance - too many events will slow down the cycle.
                           │ LLM Request    │
                           ↓                │
                 ┌──────────────────────┐  │
-                │   Ollama-Mistral     │  │
-                │   • Mistral 7B Model │  │
+                │   Ollama-Qwen        │  │
+                │   • Qwen 0.5B Model  │  │
                 │   • Analyzes event   │  │
                 │   • Returns JSON     │  │
                 └──────────────────────┘  │
@@ -325,7 +325,7 @@ But monitor performance - too many events will slow down the cycle.
 - `USE_LLM=true` - Enable LLM mode (default)
 - `USE_LLM=false` - Use fast rule-based mode
 - `OLLAMA_URL` - Ollama API endpoint (default: `http://ollama:11434/api/generate`)
-- `OLLAMA_MODEL` - Model name (default: `mistral`)
+- `OLLAMA_MODEL` - Model name (default: `qwen2.5:0.5b`)
 - `DISPATCH_WORKERS` - Parallel workers (default: 10, consider reducing to 5 for LLM)
 
 **Event Generation Limits** (per 30-min cycle):

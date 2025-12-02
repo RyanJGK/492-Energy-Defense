@@ -3,7 +3,7 @@
 ## Issue: Ollama Container Unhealthy
 
 ### Symptoms
-- `Container ollama-mistral is unhealthy`
+- `Container ollama-qwen is unhealthy`
 - System gets stuck on "Waiting for AI Agent..."
 - Agent container doesn't start
 
@@ -91,12 +91,12 @@ docker-compose ps
 
 ### 2. View Ollama Logs
 ```bash
-docker logs ollama-mistral
+docker logs ollama-qwen
 ```
 
 ### 3. Check Ollama Health
 ```bash
-docker inspect ollama-mistral | grep -A 10 "Health"
+docker inspect ollama-qwen | grep -A 10 "Health"
 ```
 
 ### 4. Test Ollama API Manually

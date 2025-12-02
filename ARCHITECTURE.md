@@ -24,7 +24,7 @@
 │  POSTGRESQL DB       │         │   OLLAMA SERVICE     │
 │  (Port: 5432)        │         │   (Port: 11434)      │
 ├──────────────────────┤         ├──────────────────────┤
-│ Tables:              │         │ • Mistral Model      │
+│ Tables:              │         │ • Qwen Model         │
 │ • login_events       │         │ • LLM Inference      │
 │ • firewall_logs      │         │ • 4GB+ RAM           │
 │ • patch_levels       │         └──────────────────────┘
@@ -224,8 +224,8 @@ postgres_data/          # Persistent database storage
   └─> Tables: login_events, firewall_logs, 
               patch_levels, event_analyses
 
-ollama_data/           # Mistral model storage (~4GB)
-  └─> Models: mistral (downloaded on first run)
+ollama_data/           # Qwen model storage (~400MB)
+  └─> Models: qwen2.5:0.5b (downloaded on first run)
 ```
 
 ## 🔌 Network Ports
@@ -275,7 +275,7 @@ Internal only:
 1. docker-compose up
    ├─> Start Postgres (wait for healthy)
    ├─> Start Ollama (wait for healthy)
-   ├─> Download Mistral model (ollama-init)
+   ├─> Download Qwen model (ollama-init)
    ├─> Start Agent (wait for healthy)
    └─> Start Backend
        ├─> Initialize database tables

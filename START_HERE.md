@@ -26,7 +26,7 @@ A modern web interface showing:
 ### Behind the Scenes
 The system is:
 - Generating security events every 30 minutes
-- Analyzing them with AI (Mistral LLM)
+- Analyzing them with AI (Qwen LLM)
 - Storing results in PostgreSQL
 - Displaying them in the dashboard
 
@@ -46,7 +46,7 @@ The system is:
 ## Key Features
 
 ✨ **Real-time Monitoring**: Events are analyzed as they're generated
-🤖 **AI-Powered**: Mistral LLM analyzes each security event
+🤖 **AI-Powered**: Qwen LLM analyzes each security event
 📊 **Visual Dashboard**: Modern web UI for SOC-style monitoring
 🔍 **Smart Filtering**: Filter by severity, event type, and more
 📋 **Case Management**: Detailed review of each security incident

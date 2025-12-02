@@ -2,7 +2,7 @@
 
 ## What Changed?
 
-✅ **LLM Mode Enabled**: The agent now uses Ollama/Mistral AI for intelligent event analysis  
+✅ **LLM Mode Enabled**: The agent now uses Ollama/Qwen AI for intelligent event analysis  
 ✅ **Reduced Events**: Only 23-57 events per cycle (instead of 120-432) to prevent overload  
 ✅ **Smart Fallback**: If LLM fails, automatically switches to rule-based analysis  
 
@@ -22,10 +22,10 @@ docker-compose build agent
 # Start all services
 docker-compose up -d
 
-# Wait for Ollama to pull Mistral model (may take 2-5 minutes)
+# Wait for Ollama to pull Qwen model (may take 1-2 minutes)
 docker logs -f ollama-init
 
-# When you see "Mistral model ready!", press Ctrl+C
+# When you see "Qwen model ready!", press Ctrl+C
 ```
 
 ### Option 2: Quick Restart
@@ -53,7 +53,7 @@ curl http://localhost:8000/health | jq
   "service": "492-Energy-Defense Cyber Event Triage Agent",
   "mode": "LLM",
   "ollama_url": "http://ollama:11434/api/generate",
-  "model": "mistral"
+  "model": "qwen2.5:0.5b"
 }
 ```
 
@@ -153,8 +153,8 @@ docker ps | grep ollama
 # Restart Ollama
 docker-compose restart ollama
 
-# Pull Mistral model
-docker exec ollama-mistral ollama pull mistral
+# Pull Qwen model
+docker exec ollama-qwen ollama pull qwen2.5:0.5b
 ```
 
 ### Problem: LLM responses are slow
@@ -246,7 +246,7 @@ Both are valid! Choose based on your needs.
 The system is now running in LLM mode and will:
 
 1. ✅ Generate 23-57 events every 30 minutes
-2. ✅ Send each event to Ollama/Mistral for AI analysis
+2. ✅ Send each event to Ollama/Qwen for AI analysis
 3. ✅ Store analysis results in the database
 4. ✅ Fall back to rules if LLM fails
 
@@ -291,7 +291,7 @@ db.close()
 
 ## Summary
 
-✅ **LLM Mode Active** - Using Mistral AI for intelligent analysis  
+✅ **LLM Mode Active** - Using Qwen AI for intelligent analysis  
 ✅ **Reduced Load** - Only ~30-50 events per cycle  
 ✅ **Fast Cycles** - Complete in 1-2 minutes  
 ✅ **Robust** - Falls back to rules if LLM fails  

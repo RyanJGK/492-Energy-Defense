@@ -1,6 +1,6 @@
 # 492-ENERGY-DEFENSE CYBERSECURITY AGENT
 
-A Dockerized local IT-security simulation system for educational purposes. This project simulates real-world cybersecurity events and uses an AI agent (Ollama Mistral) to analyze and triage security incidents in real-time.
+A Dockerized local IT-security simulation system for educational purposes. This project simulates real-world cybersecurity events and uses an AI agent (Ollama Qwen) to analyze and triage security incidents in real-time.
 
 ## 🆕 NEW: Security Dashboard with Analyst Review
 
@@ -20,9 +20,9 @@ Access the dashboard at **http://localhost:3000** after starting the system.
 
 The system consists of two main components:
 
-### 1. AI Agent (Ollama Mistral)
+### 1. AI Agent (Ollama Qwen)
 - **Purpose**: Analyzes security events one-by-one and returns structured JSON risk assessments
-- **Technology**: FastAPI + Ollama Mistral
+- **Technology**: FastAPI + Ollama Qwen
 - **Location**: `./agent/`
 - **Port**: 8000
 
@@ -108,7 +108,7 @@ docker-compose up -d
 
 3. **Wait for initialization:**
 The first startup will:
-- Pull the Mistral AI model (~4GB, takes 5-10 minutes)
+- Pull the Qwen AI model (~400MB, takes 1-2 minutes)
 - Initialize the PostgreSQL database
 - Start generating events immediately
 
@@ -177,7 +177,7 @@ workspace/
 
 **Agent:**
 - `OLLAMA_URL`: Ollama API endpoint (default: `http://ollama:11434/api/generate`)
-- `OLLAMA_MODEL`: Model to use (default: `mistral`)
+- `OLLAMA_MODEL`: Model to use (default: `qwen2.5:0.5b`)
 
 ## 🔍 Monitoring Events
 
@@ -224,7 +224,7 @@ docker logs -f cyber-agent
 docker logs -f cyber-dashboard
 
 # Ollama logs
-docker logs -f ollama-mistral
+docker logs -f ollama-qwen
 ```
 
 ## 📊 Data Generation Schedule
@@ -307,7 +307,7 @@ docker-compose restart agent
 ### Ollama model not loading
 ```bash
 # Manually pull the model
-docker exec -it ollama-mistral ollama pull mistral
+docker exec -it ollama-qwen ollama pull qwen2.5:0.5b
 ```
 
 ### Database connection errors

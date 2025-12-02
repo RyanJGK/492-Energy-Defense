@@ -1,4 +1,4 @@
-"""AI Agent API for cybersecurity event analysis using Ollama Mistral."""
+"""AI Agent API for cybersecurity event analysis using Ollama Qwen."""
 import os
 import logging
 import json
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="492-Energy-Defense Cyber Event Triage Agent")
 
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://ollama:11434/api/generate")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 USE_LLM = os.getenv("USE_LLM", "true").lower() == "true"  # Enable LLM mode by default
 
 
@@ -372,7 +372,7 @@ async def evaluate_event(event: Event) -> AnalysisResult:
     Evaluate a cybersecurity event and return risk assessment.
     
     Mode determined by USE_LLM environment variable:
-    - USE_LLM=true: Uses Ollama/Mistral LLM for intelligent analysis
+    - USE_LLM=true: Uses Ollama/Qwen LLM for intelligent analysis
     - USE_LLM=false: Uses deterministic rule-based scoring
     """
     logger.info(f"Received {event.type} event for analysis (LLM mode: {USE_LLM})")

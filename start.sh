@@ -11,7 +11,7 @@ docker-compose up -d
 
 echo ""
 echo "⏳ Waiting for services to initialize..."
-echo "   (This may take 5-10 minutes on first run while Mistral model downloads)"
+echo "   (This may take 3-5 minutes on first run while Qwen model downloads)"
 echo ""
 
 # Wait for services to be healthy
@@ -22,7 +22,7 @@ done
 echo "✅ Database ready"
 
 echo ""
-echo "Waiting for Ollama and Mistral model..."
+echo "Waiting for Ollama and Qwen model..."
 sleep 10
 echo "✅ Ollama ready (model may still be downloading in background)"
 

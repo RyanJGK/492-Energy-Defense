@@ -6,7 +6,7 @@ This Dockerized cybersecurity simulation system has been fully implemented accor
 
 ## 📦 What Was Built
 
-### Component 1: AI Agent (Ollama Mistral)
+### Component 1: AI Agent (Ollama Qwen)
 **Location**: `./agent/`
 
 **Files Created:**
@@ -19,7 +19,7 @@ This Dockerized cybersecurity simulation system has been fully implemented accor
 - ✅ Applies exact scoring weights as specified
 - ✅ Returns structured JSON with severity, risk score, reasoning, and recommended actions
 - ✅ REST API with FastAPI
-- ✅ Integrated with Ollama Mistral (optional - currently uses deterministic rules for speed)
+- ✅ Integrated with Ollama Qwen (optional - currently uses deterministic rules for speed)
 - ✅ Health check endpoints
 - ✅ Swagger UI documentation at `/docs`
 
@@ -93,7 +93,7 @@ This Dockerized cybersecurity simulation system has been fully implemented accor
 
 **Services:**
 1. ✅ `db` - PostgreSQL 15 database
-2. ✅ `ollama` - Ollama service with Mistral model
+2. ✅ `ollama` - Ollama service with Qwen model
 3. ✅ `agent` - AI analysis API (port 8000)
 4. ✅ `backend` - Data generator and scheduler
 5. ✅ `ollama-init` - One-time model downloader

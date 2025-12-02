@@ -62,7 +62,7 @@ Or manually:
 
 ```bash
 # Check Ollama logs
-docker logs ollama-mistral
+docker logs ollama-qwen
 
 # Test if Ollama responds
 curl http://localhost:11434/api/tags

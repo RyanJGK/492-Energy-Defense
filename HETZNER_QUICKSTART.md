@@ -113,7 +113,7 @@ cd ~/492-energy-defense
 docker compose up -d
 
 # Watch logs
-docker logs -f ollama-init  # Wait for "Mistral model ready!"
+docker logs -f ollama-init  # Wait for "Qwen model ready!"
 docker logs -f cyber-agent   # Watch LLM analysis
 ```
 

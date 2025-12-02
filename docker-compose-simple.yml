@@ -30,7 +30,7 @@ services:
     container_name: cyber-agent
     environment:
       - OLLAMA_URL=http://ollama:11434/api/generate
-      - OLLAMA_MODEL=mistral
+      - OLLAMA_MODEL=qwen2.5:0.5b
     ports:
       - "8000:8000"
     healthcheck:

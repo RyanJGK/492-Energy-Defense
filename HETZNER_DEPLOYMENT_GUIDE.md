@@ -15,7 +15,7 @@
 
 **Minimum Requirements for LLM Mode:**
 - **CPU**: 4 vCPUs
-- **RAM**: 16 GB (Ollama/Mistral needs 4-8GB, plus system overhead)
+- **RAM**: 16 GB (Ollama/Qwen needs 2-4GB, plus system overhead)
 - **Storage**: 40 GB SSD
 - **Recommended**: CPX31 or CX41
 
@@ -313,18 +313,18 @@ docker compose up -d
 1. Download Docker images (3-5 minutes)
 2. Build custom images (2-3 minutes)
 3. Start all containers
-4. Pull Mistral model (~4GB, 5-10 minutes depending on connection)
+4. Pull Qwen model (~400MB, 1-2 minutes depending on connection)
 
 ### 6.2 Monitor Initial Startup
 
-**Watch Ollama pull Mistral model**:
+**Watch Ollama pull Qwen model**:
 ```bash
 docker logs -f ollama-init
 ```
 
 Wait until you see:
 ```
-Mistral model ready!
+Qwen model ready!
 ```
 
 Press `Ctrl+C` to exit logs.
@@ -336,7 +336,7 @@ docker ps
 
 **Should see 5 running containers**:
 - `cyber-events-db` (PostgreSQL)
-- `ollama-mistral` (Ollama)
+- `ollama-qwen` (Ollama)
 - `cyber-agent` (Agent API)
 - `cyber-backend` (Event generator)
 - `ollama-init` (will exit after pulling model - that's normal)
@@ -356,7 +356,7 @@ curl http://localhost:8000/health | jq
   "status": "healthy",
   "mode": "LLM",
   "ollama_url": "http://ollama:11434/api/generate",
-  "model": "mistral"
+  "model": "qwen2.5:0.5b"
 }
 ```
 
@@ -407,7 +407,7 @@ docker logs -f cyber-backend
 docker logs -f cyber-agent
 
 # Ollama (LLM engine)
-docker logs ollama-mistral
+docker logs ollama-qwen
 
 # All logs combined
 docker compose logs -f
@@ -683,11 +683,11 @@ free -h
 # Restart Ollama
 docker compose restart ollama
 
-# Re-pull Mistral model
-docker exec ollama-mistral ollama pull mistral
+# Re-pull Qwen model
+docker exec ollama-qwen ollama pull qwen2.5:0.5b
 
 # Check Ollama logs
-docker logs ollama-mistral
+docker logs ollama-qwen
 ```
 
 ### Problem: Can't Connect from Outside
@@ -800,7 +800,7 @@ docker container prune
 ✅ **Docker Installed** and configured  
 ✅ **Code Deployed** to server  
 ✅ **Services Running** (all containers up)  
-✅ **Mistral Model** downloaded  
+✅ **Qwen Model** downloaded  
 ✅ **LLM Mode** enabled and verified  
 ✅ **Firewall** configured  
 ✅ **Monitoring** set up  
