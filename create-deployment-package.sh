@@ -2,48 +2,54 @@
 # Create deployment package for Hetzner
 
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║  Creating Deployment Package for Hetzner              ║"
+echo "║  Creating Hetzner Deployment Package                  ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
 PACKAGE_NAME="cyber-defense-deployment.tar.gz"
-TEMP_DIR="cyber-defense-package"
 
-echo "Preparing files..."
-
-# Clean up any previous package
-rm -rf "$TEMP_DIR" "$PACKAGE_NAME" 2>/dev/null
+echo "Creating deployment package..."
 
 # Create temporary directory
-mkdir -p "$TEMP_DIR"
+TEMP_DIR=$(mktemp -d)
+DEPLOY_DIR="$TEMP_DIR/492-energy-defense"
+mkdir -p "$DEPLOY_DIR"
 
-# Copy essential files
+# Copy necessary files
 echo "Copying project files..."
-cp -r agent "$TEMP_DIR/"
-cp -r backend "$TEMP_DIR/"
-cp -r dashboard "$TEMP_DIR/"
-cp docker-compose.yml "$TEMP_DIR/"
-cp .env.example "$TEMP_DIR/"
-cp README.md "$TEMP_DIR/" 2>/dev/null || true
-cp check-qwen-model.sh "$TEMP_DIR/" 2>/dev/null || true
-cp apply-fix.sh "$TEMP_DIR/" 2>/dev/null || true
-cp test-llm-mode.sh "$TEMP_DIR/" 2>/dev/null || true
-cp FIX_QWEN_SCORING_ISSUE.md "$TEMP_DIR/" 2>/dev/null || true
+cp -r agent "$DEPLOY_DIR/"
+cp -r backend "$DEPLOY_DIR/"
+cp -r dashboard "$DEPLOY_DIR/"
+cp docker-compose.yml "$DEPLOY_DIR/"
+cp .env.example "$DEPLOY_DIR/.env"
+cp .gitignore "$DEPLOY_DIR/" 2>/dev/null || true
 
-# Create deployment script for Hetzner
-cat > "$TEMP_DIR/deploy.sh" << 'DEPLOY_EOF'
+# Copy scripts
+cp start.sh "$DEPLOY_DIR/"
+cp test-llm-mode.sh "$DEPLOY_DIR/"
+cp check-qwen-model.sh "$DEPLOY_DIR/"
+cp apply-fix.sh "$DEPLOY_DIR/"
+
+# Copy essential documentation
+echo "Copying documentation..."
+cp README.md "$DEPLOY_DIR/"
+cp MIGRATION_COMPLETE.md "$DEPLOY_DIR/" 2>/dev/null || true
+cp FIX_QWEN_SCORING_ISSUE.md "$DEPLOY_DIR/" 2>/dev/null || true
+
+# Create server setup script
+cat > "$DEPLOY_DIR/setup-server.sh" << 'SETUPEOF'
 #!/bin/bash
-# Deployment script for Hetzner server
+# Server setup script for Hetzner deployment
 
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║  492-Energy-Defense Deployment Script                 ║"
+echo "║  492-Energy-Defense Server Setup                      ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
-    echo "Please run as root (or use sudo)"
-    exit 1
+   echo "Please run as root (or use sudo)"
+   exit 1
 fi
 
 echo "[1/6] Updating system packages..."
@@ -52,9 +58,12 @@ apt-get upgrade -y -qq
 
 echo "[2/6] Installing Docker..."
 if ! command -v docker &> /dev/null; then
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
-    rm get-docker.sh
+    # Install Docker
+    apt-get install -y -qq apt-transport-https ca-certificates curl software-properties-common
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    add-apt-repository -y "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    apt-get update -qq
+    apt-get install -y -qq docker-ce docker-ce-cli containerd.io
     systemctl enable docker
     systemctl start docker
     echo "✓ Docker installed"
@@ -64,292 +73,256 @@ fi
 
 echo "[3/6] Installing Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
-    apt-get install -y docker-compose-plugin
+    curl -L "https://github.com/docker/compose/releases/download/v2.24.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    ln -sf /usr/local/bin/docker-compose /usr/bin/docker-compose
     echo "✓ Docker Compose installed"
 else
     echo "✓ Docker Compose already installed"
 fi
 
-echo "[4/6] Setting up firewall..."
-apt-get install -y ufw
+echo "[4/6] Installing utilities..."
+apt-get install -y -qq curl jq net-tools ufw
+
+echo "[5/6] Configuring firewall..."
 ufw --force enable
-ufw allow 22/tcp     # SSH
-ufw allow 8000/tcp   # Agent API
-ufw allow 3000/tcp   # Dashboard
-ufw allow 11434/tcp  # Ollama (optional)
+ufw allow 22/tcp    # SSH
+ufw allow 8000/tcp  # Agent API
+ufw allow 3000/tcp  # Dashboard
+ufw allow 5432/tcp  # PostgreSQL (optional, for external access)
 echo "✓ Firewall configured"
 
-echo "[5/6] Setting up environment..."
-if [ ! -f .env ]; then
-    cp .env.example .env
-    echo "✓ Created .env file"
-fi
+echo "[6/6] Setting up application directory..."
+APP_DIR="/opt/492-energy-defense"
+mkdir -p "$APP_DIR"
+cd "$APP_DIR" || exit 1
 
-echo "[6/6] Starting services..."
-docker compose down 2>/dev/null || true
-docker compose up -d
-
-echo ""
-echo "════════════════════════════════════════════════════════"
-echo "Deployment in progress..."
-echo "════════════════════════════════════════════════════════"
-echo ""
-echo "Waiting for services to initialize (this may take 2-3 minutes)..."
-sleep 10
-
-echo ""
-echo "Monitoring Qwen model download..."
-docker logs -f ollama-init 2>&1 &
-LOGS_PID=$!
-
-# Wait for model to be ready (max 5 minutes)
-COUNTER=0
-while [ $COUNTER -lt 60 ]; do
-    if docker logs ollama-init 2>&1 | grep -q "Qwen model ready"; then
-        kill $LOGS_PID 2>/dev/null || true
-        echo ""
-        echo "✓ Qwen model downloaded successfully"
-        break
-    fi
-    sleep 5
-    COUNTER=$((COUNTER + 1))
-done
-
-if [ $COUNTER -eq 60 ]; then
-    echo "⚠ Model download taking longer than expected"
-    echo "  Check logs with: docker logs ollama-init"
+# Copy files from current directory
+if [ -f "docker-compose.yml" ]; then
+    echo "✓ Files already in place"
+else
+    echo "Error: docker-compose.yml not found. Please extract the deployment package first."
+    exit 1
 fi
 
 echo ""
-echo "Checking service status..."
-docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "NAME|cyber|ollama"
-
-echo ""
 echo "════════════════════════════════════════════════════════"
-echo "✅ Deployment Complete!"
+echo "✅ Server setup complete!"
 echo "════════════════════════════════════════════════════════"
 echo ""
-echo "Your services are now running:"
+echo "Next steps:"
+echo "1. Review and edit .env file if needed"
+echo "2. Start the application: docker-compose up -d"
+echo "3. Watch model download: docker logs -f ollama-init"
+echo "4. Check status: docker ps"
 echo ""
-echo "  • Dashboard:  http://$(hostname -I | awk '{print $1}'):3000"
-echo "  • Agent API:  http://$(hostname -I | awk '{print $1}'):8000"
-echo "  • API Docs:   http://$(hostname -I | awk '{print $1}'):8000/docs"
+echo "Access points:"
+echo "  - Dashboard: http://$(curl -s ifconfig.me):3000"
+echo "  - Agent API: http://$(curl -s ifconfig.me):8000"
 echo ""
-echo "Useful commands:"
-echo "  • View logs:         docker compose logs -f"
-echo "  • Check status:      docker ps"
-echo "  • Stop services:     docker compose down"
-echo "  • Restart services:  docker compose restart"
-echo "  • Test model:        ./check-qwen-model.sh"
+SETUPEOF
+
+chmod +x "$DEPLOY_DIR/setup-server.sh"
+
+# Create quick start script
+cat > "$DEPLOY_DIR/quick-start.sh" << 'STARTEOF'
+#!/bin/bash
+# Quick start script
+
+echo "Starting 492-Energy-Defense..."
 echo ""
-echo "If you encounter scoring issues with Qwen 0.5B:"
-echo "  • Run: ./apply-fix.sh"
-echo "  • See: FIX_QWEN_SCORING_ISSUE.md"
-echo ""
-DEPLOY_EOF
 
-chmod +x "$TEMP_DIR/deploy.sh"
-
-# Create README for deployment
-cat > "$TEMP_DIR/DEPLOY_README.md" << 'README_EOF'
-# Deployment Package for Hetzner
-
-## Quick Deployment Steps
-
-### 1. Upload to Hetzner Server
-
-```bash
-# On your local machine
-scp cyber-defense-deployment.tar.gz root@YOUR_SERVER_IP:/root/
-```
-
-### 2. Extract and Deploy
-
-```bash
-# SSH into your Hetzner server
-ssh root@YOUR_SERVER_IP
-
-# Extract the package
-cd /root
-tar -xzf cyber-defense-deployment.tar.gz
-cd cyber-defense-package
-
-# Run deployment script
-./deploy.sh
-```
-
-That's it! The script will:
-- ✅ Install Docker and Docker Compose
-- ✅ Configure firewall
-- ✅ Start all services
-- ✅ Download Qwen model
-- ✅ Set up the dashboard
-
-### 3. Access Your Services
-
-After deployment completes (2-3 minutes):
-
-- **Dashboard**: http://YOUR_SERVER_IP:3000
-- **Agent API**: http://YOUR_SERVER_IP:8000
-- **API Docs**: http://YOUR_SERVER_IP:8000/docs
-
-## Server Requirements
-
-### Minimum (Budget)
-- **RAM**: 8GB
-- **CPU**: 2 vCPUs
-- **Storage**: 20GB
-- **Cost**: ~€8-15/month
-
-Recommended Hetzner: **CPX21** (3 vCPU, 8GB RAM)
-
-### Recommended (Better Performance)
-- **RAM**: 16GB
-- **CPU**: 4 vCPUs
-- **Storage**: 40GB
-- **Cost**: ~€30/month
-
-Recommended Hetzner: **CPX31** (4 vCPU, 16GB RAM)
-
-## Troubleshooting
-
-### Model Not Loading
-```bash
-# Check logs
-docker logs ollama-init
-
-# Manually pull model
-docker exec ollama-qwen ollama pull qwen2.5:0.5b
-```
-
-### Services Not Starting
-```bash
-# Check all logs
-docker compose logs
-
-# Restart everything
-docker compose down
-docker compose up -d
-```
-
-### Firewall Issues
-```bash
-# Check firewall status
-ufw status
-
-# Open required ports
-ufw allow 8000/tcp
-ufw allow 3000/tcp
-```
-
-### Qwen Model Scoring Incorrectly
-The 0.5B model may give inaccurate scores. Fix options:
-
-```bash
-# Option 1: Switch to rule-based (most accurate)
-./apply-fix.sh  # Choose option 1
-
-# Option 2: Upgrade to Qwen 1.5B (better AI)
-./apply-fix.sh  # Choose option 2
-```
-
-See `FIX_QWEN_SCORING_ISSUE.md` for details.
-
-## Manual Deployment (Alternative)
-
-If the deploy.sh script doesn't work, you can manually:
-
-```bash
-# Install Docker
-curl -fsSL https://get.docker.com | sh
-
-# Install Docker Compose
-apt-get install docker-compose-plugin
-
-# Configure firewall
-ufw allow 22/tcp
-ufw allow 8000/tcp
-ufw allow 3000/tcp
+# Check if Docker is running
+if ! docker ps &> /dev/null; then
+    echo "Error: Docker is not running"
+    echo "Run: systemctl start docker"
+    exit 1
+fi
 
 # Start services
-docker compose up -d
-
-# Watch model download
-docker logs -f ollama-init
-```
-
-## Configuration
-
-### Change Model
-Edit `docker-compose.yml`:
-```yaml
-environment:
-  - OLLAMA_MODEL=qwen2.5:1.5b  # Change to 1.5b or 3b
-```
-
-### Disable LLM (Use Rule-Based)
-Edit `docker-compose.yml`:
-```yaml
-environment:
-  - USE_LLM=false  # Use accurate rule-based scoring
-```
-
-### Change Database Password
-Edit `.env` or `docker-compose.yml`:
-```yaml
-environment:
-  POSTGRES_PASSWORD: your_secure_password
-```
-
-## Support Files Included
-
-- `deploy.sh` - Automated deployment script
-- `check-qwen-model.sh` - Verify model is loaded
-- `apply-fix.sh` - Fix scoring issues
-- `test-llm-mode.sh` - Test the system
-- `FIX_QWEN_SCORING_ISSUE.md` - Detailed troubleshooting
-
-## Next Steps After Deployment
-
-1. **Test the system**:
-   ```bash
-   ./check-qwen-model.sh
-   ```
-
-2. **Access the dashboard**:
-   Open http://YOUR_SERVER_IP:3000 in browser
-
-3. **Test the API**:
-   ```bash
-   curl http://localhost:8000/health | jq
-   ```
-
-4. **Monitor logs**:
-   ```bash
-   docker compose logs -f
-   ```
-
----
-
-**Questions? Check the main README.md or FIX_QWEN_SCORING_ISSUE.md**
-README_EOF
+docker-compose up -d
 
 echo ""
-echo "Creating tarball..."
-tar -czf "$PACKAGE_NAME" -C "$TEMP_DIR" .
+echo "Services starting..."
+echo ""
+echo "Monitor progress:"
+echo "  docker logs -f ollama-init    # Watch model download (1-2 min)"
+echo "  docker logs -f cyber-agent    # Watch agent startup"
+echo "  docker ps                     # Check all containers"
+echo ""
+echo "Once ready, access:"
+echo "  Dashboard: http://$(hostname -I | awk '{print $1}'):3000"
+echo "  Agent API: http://$(hostname -I | awk '{print $1}'):8000"
+echo ""
+STARTEOF
 
-# Clean up temp directory
+chmod +x "$DEPLOY_DIR/quick-start.sh"
+
+# Create deployment instructions
+cat > "$DEPLOY_DIR/DEPLOY_INSTRUCTIONS.txt" << 'INSTREOF'
+╔════════════════════════════════════════════════════════════════╗
+║  492-Energy-Defense Deployment Instructions for Hetzner       ║
+╚════════════════════════════════════════════════════════════════╝
+
+PREREQUISITES:
+- Hetzner Cloud Server (CPX21 or higher recommended)
+- Ubuntu 22.04 or 24.04
+- Root access with password
+- At least 8GB RAM, 40GB disk
+
+═══════════════════════════════════════════════════════════════
+
+DEPLOYMENT STEPS:
+
+1. CREATE HETZNER SERVER
+   - Go to: https://console.hetzner.cloud/
+   - Create new server:
+     * Image: Ubuntu 22.04 or 24.04
+     * Type: CPX21 (3 vCPU, 8GB RAM) or higher
+     * Location: Closest to you
+     * Set root password when creating server
+   - Note the server IP address
+
+2. UPLOAD DEPLOYMENT PACKAGE
+   Using SCP (from your local machine):
+   
+   scp cyber-defense-deployment.tar.gz root@YOUR_SERVER_IP:/root/
+   
+   Or using WinSCP/FileZilla if on Windows
+
+3. SSH INTO SERVER
+   
+   ssh root@YOUR_SERVER_IP
+   # Enter password when prompted
+
+4. EXTRACT PACKAGE
+   
+   cd /root
+   tar -xzf cyber-defense-deployment.tar.gz
+   cd 492-energy-defense
+
+5. RUN SETUP SCRIPT
+   
+   bash setup-server.sh
+   
+   This will:
+   - Update system packages
+   - Install Docker & Docker Compose
+   - Configure firewall
+   - Set up application directory
+
+6. START APPLICATION
+   
+   bash quick-start.sh
+   
+   Or manually:
+   docker-compose up -d
+
+7. MONITOR STARTUP
+   
+   # Watch Qwen model download (1-2 minutes)
+   docker logs -f ollama-init
+   
+   # Press Ctrl+C when you see "Qwen model ready!"
+   
+   # Check all containers are running
+   docker ps
+
+8. ACCESS THE APPLICATION
+   
+   Dashboard: http://YOUR_SERVER_IP:3000
+   Agent API: http://YOUR_SERVER_IP:8000
+   API Docs:  http://YOUR_SERVER_IP:8000/docs
+
+═══════════════════════════════════════════════════════════════
+
+USEFUL COMMANDS:
+
+Check status:
+  docker ps
+  docker-compose ps
+
+View logs:
+  docker logs cyber-agent
+  docker logs cyber-backend
+  docker logs cyber-dashboard
+
+Restart services:
+  docker-compose restart
+
+Stop everything:
+  docker-compose down
+
+Update configuration:
+  nano .env
+  docker-compose restart
+
+Test the agent:
+  bash test-llm-mode.sh
+
+═══════════════════════════════════════════════════════════════
+
+TROUBLESHOOTING:
+
+Issue: Cannot connect to server
+Fix: Check firewall allows ports 22, 3000, 8000
+     ufw status
+     ufw allow 3000/tcp
+     ufw allow 8000/tcp
+
+Issue: Containers not starting
+Fix: Check Docker is running
+     systemctl status docker
+     systemctl start docker
+
+Issue: Model not loading
+Fix: docker exec ollama-qwen ollama pull qwen2.5:0.5b
+
+Issue: Low scoring accuracy
+Fix: bash apply-fix.sh
+     Choose option 1 (Rule-Based) for 100% accuracy
+
+═══════════════════════════════════════════════════════════════
+
+SECURITY NOTES:
+
+1. Change default passwords in .env file
+2. Use firewall to restrict access
+3. Consider setting up SSL/TLS for production
+4. Create non-root user for running services
+5. Regular security updates: apt-get update && apt-get upgrade
+
+═══════════════════════════════════════════════════════════════
+
+For detailed documentation, see README.md
+For model issues, see FIX_QWEN_SCORING_ISSUE.md
+
+Support: Check logs with docker-compose logs
+INSTREOF
+
+# Make scripts executable
+chmod +x "$DEPLOY_DIR"/*.sh
+
+# Create the tarball
+echo "Creating tarball..."
+cd "$TEMP_DIR" || exit 1
+tar -czf "$PACKAGE_NAME" 492-energy-defense/
+
+# Move to current directory
+mv "$PACKAGE_NAME" "$OLDPWD/"
+cd "$OLDPWD" || exit 1
+
+# Cleanup
 rm -rf "$TEMP_DIR"
 
 echo ""
-echo "════════════════════════════════════════════════════════"
-echo "✅ Package created: $PACKAGE_NAME"
-echo "════════════════════════════════════════════════════════"
+echo "✅ Deployment package created: $PACKAGE_NAME"
 echo ""
 echo "Package size:"
-ls -lh "$PACKAGE_NAME" | awk '{print "  " $9 ": " $5}'
+du -h "$PACKAGE_NAME"
 echo ""
-echo "📦 Deployment Instructions:"
+echo "═══════════════════════════════════════════════════════"
+echo "Next steps:"
 echo ""
 echo "1. Upload to Hetzner server:"
 echo "   scp $PACKAGE_NAME root@YOUR_SERVER_IP:/root/"
@@ -357,14 +330,12 @@ echo ""
 echo "2. SSH into server:"
 echo "   ssh root@YOUR_SERVER_IP"
 echo ""
-echo "3. Extract and deploy:"
-echo "   cd /root"
+echo "3. Extract and setup:"
 echo "   tar -xzf $PACKAGE_NAME"
-echo "   cd cyber-defense-package"
-echo "   ./deploy.sh"
+echo "   cd 492-energy-defense"
+echo "   bash setup-server.sh"
+echo "   bash quick-start.sh"
 echo ""
-echo "4. Access services:"
-echo "   Dashboard: http://YOUR_SERVER_IP:3000"
-echo "   API:       http://YOUR_SERVER_IP:8000"
-echo ""
+echo "See DEPLOY_INSTRUCTIONS.txt in the package for full details."
+echo "═══════════════════════════════════════════════════════"
 
