@@ -1,62 +1,59 @@
 #!/bin/bash
-# One-Command Deployment to Hetzner Server
-# Usage: ./deploy-to-hetzner.sh <SERVER_IP> [SSH_USER]
+# Deploy 492-Energy-Defense to Hetzner Server
+# Run this FROM YOUR LOCAL MACHINE
 
 set -e
 
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║  492-Energy-Defense - Hetzner Deployment              ║"
+echo "╚════════════════════════════════════════════════════════╝"
+echo ""
+
 # Colors
-RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
+RED='\033[0;31m'
 NC='\033[0m'
-
-echo -e "${BLUE}"
-cat << "EOF"
-╔══════════════════════════════════════════════════════════════╗
-║                                                              ║
-║     492-ENERGY-DEFENSE CYBERSECURITY AGENT                  ║
-║     Automated Hetzner Deployment                            ║
-║                                                              ║
-╚══════════════════════════════════════════════════════════════╝
-EOF
-echo -e "${NC}"
 
 # Check arguments
 if [ -z "$1" ]; then
-    echo -e "${RED}Error: Server IP required${NC}"
+    echo -e "${RED}Error: Server IP address required${NC}"
     echo ""
-    echo "Usage: $0 <SERVER_IP> [SSH_USER]"
+    echo "Usage: ./deploy-to-hetzner.sh <SERVER_IP> [SSH_USER]"
     echo ""
-    echo "Example:"
-    echo "  $0 65.21.123.45"
-    echo "  $0 65.21.123.45 cyber"
+    echo "Examples:"
+    echo "  ./deploy-to-hetzner.sh 65.21.123.45"
+    echo "  ./deploy-to-hetzner.sh 65.21.123.45 root"
+    echo "  ./deploy-to-hetzner.sh 65.21.123.45 cyber"
     echo ""
     exit 1
 fi
 
 SERVER_IP="$1"
-SSH_USER="${2:-root}"
+SSH_USER="${2:-cyber}"
+DEPLOY_DIR="/opt/cyber-defense"
 
-echo -e "${GREEN}Deployment Configuration:${NC}"
-echo "  Server IP: $SERVER_IP"
-echo "  SSH User:  $SSH_USER"
+echo "Deployment Configuration:"
+echo "  • Server IP: $SERVER_IP"
+echo "  • SSH User: $SSH_USER"
+echo "  • Deploy Directory: $DEPLOY_DIR"
 echo ""
 
 # Test SSH connection
 echo -e "${YELLOW}[1/7] Testing SSH connection...${NC}"
-if ssh -o ConnectTimeout=5 -o BatchMode=yes "$SSH_USER@$SERVER_IP" exit 2>/dev/null; then
+if ssh -o ConnectTimeout=5 -o BatchMode=yes $SSH_USER@$SERVER_IP exit 2>/dev/null; then
     echo -e "${GREEN}✓ SSH connection successful${NC}"
 else
     echo -e "${RED}✗ Cannot connect to server${NC}"
     echo ""
-    echo "Please ensure:"
-    echo "  1. Server IP is correct: $SERVER_IP"
-    echo "  2. SSH key is configured"
-    echo "  3. User exists: $SSH_USER"
+    echo "Troubleshooting:"
+    echo "  1. Check server IP is correct: $SERVER_IP"
+    echo "  2. Ensure SSH key is added to server"
+    echo "  3. Verify user '$SSH_USER' exists on server"
+    echo "  4. Try: ssh $SSH_USER@$SERVER_IP"
     echo ""
-    echo "To add your SSH key:"
-    echo "  ssh-copy-id $SSH_USER@$SERVER_IP"
+    echo "If you need to setup the server first, run:"
+    echo "  ssh root@$SERVER_IP 'bash -s' < hetzner-setup.sh"
     exit 1
 fi
 echo ""
@@ -66,186 +63,183 @@ echo -e "${YELLOW}[2/7] Creating deployment package...${NC}"
 TEMP_DIR=$(mktemp -d)
 PACKAGE_NAME="cyber-defense-$(date +%Y%m%d-%H%M%S).tar.gz"
 
-# Copy project files (exclude .git and node_modules)
-tar -czf "$TEMP_DIR/$PACKAGE_NAME" \
-    --exclude='.git' \
-    --exclude='node_modules' \
-    --exclude='*.pyc' \
-    --exclude='__pycache__' \
-    --exclude='.env' \
-    -C "$(dirname "$0")" \
-    .
+# Copy files to temp directory
+mkdir -p $TEMP_DIR/cyber-defense
+cp -r agent backend dashboard docker-compose.yml .env.example $TEMP_DIR/cyber-defense/
+cp apply-fix.sh check-qwen-model.sh start.sh test-llm-mode.sh $TEMP_DIR/cyber-defense/ 2>/dev/null || true
+cp *.md $TEMP_DIR/cyber-defense/ 2>/dev/null || true
+
+# Create production docker-compose override
+cat > $TEMP_DIR/cyber-defense/docker-compose.prod.yml << 'EOF'
+version: '3.8'
+
+# Production overrides for Hetzner deployment
+services:
+  agent:
+    restart: always
+    environment:
+      - USE_LLM=false  # Rule-based mode for reliability
+    
+  backend:
+    restart: always
+    
+  dashboard:
+    restart: always
+    
+  db:
+    restart: always
+    
+  ollama:
+    restart: always
+EOF
+
+# Create deployment script that will run on server
+cat > $TEMP_DIR/cyber-defense/deploy.sh << 'EOF'
+#!/bin/bash
+# This script runs ON THE SERVER
+
+set -e
+
+echo "Starting deployment..."
+cd /opt/cyber-defense
+
+# Stop existing containers
+echo "Stopping existing containers..."
+docker compose down 2>/dev/null || true
+
+# Pull latest images
+echo "Pulling Docker images..."
+docker compose pull
+
+# Build custom images
+echo "Building application images..."
+docker compose build
+
+# Start services
+echo "Starting services..."
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# Wait for services to be healthy
+echo "Waiting for services to be healthy..."
+sleep 10
+
+# Check status
+echo "Service status:"
+docker compose ps
+
+echo ""
+echo "✅ Deployment complete!"
+echo ""
+echo "Services:"
+echo "  • AI Agent: http://$(hostname -I | awk '{print $1}'):8000"
+echo "  • Dashboard: http://$(hostname -I | awk '{print $1}'):3000"
+echo ""
+EOF
+
+chmod +x $TEMP_DIR/cyber-defense/deploy.sh
+
+# Create package
+cd $TEMP_DIR
+tar -czf $PACKAGE_NAME cyber-defense/
+cd - > /dev/null
 
 echo -e "${GREEN}✓ Package created: $PACKAGE_NAME${NC}"
 echo ""
 
-# Upload deployment package
-echo -e "${YELLOW}[3/7] Uploading to server...${NC}"
-scp "$TEMP_DIR/$PACKAGE_NAME" "$SSH_USER@$SERVER_IP:/tmp/"
-echo -e "${GREEN}✓ Upload complete${NC}"
+# Upload package to server
+echo -e "${YELLOW}[3/7] Uploading package to server...${NC}"
+scp $TEMP_DIR/$PACKAGE_NAME $SSH_USER@$SERVER_IP:/tmp/
+echo -e "${GREEN}✓ Package uploaded${NC}"
 echo ""
 
-# Setup server and deploy
-echo -e "${YELLOW}[4/7] Setting up server environment...${NC}"
-ssh "$SSH_USER@$SERVER_IP" bash << REMOTE_SCRIPT
-set -e
-
-echo "Installing dependencies..."
-
-# Update system
-export DEBIAN_FRONTEND=noninteractive
-apt-get update -qq
-
-# Install required packages
-apt-get install -y -qq \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release \
-    jq \
-    ufw
-
-# Install Docker if not present
-if ! command -v docker &> /dev/null; then
-    echo "Installing Docker..."
-    curl -fsSL https://get.docker.com -o get-docker.sh
-    sh get-docker.sh
-    rm get-docker.sh
-    systemctl enable docker
-    systemctl start docker
-fi
-
-# Install Docker Compose if not present
-if ! command -v docker-compose &> /dev/null; then
-    echo "Installing Docker Compose..."
-    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-\$(uname -s)-\$(uname -m)" -o /usr/local/bin/docker-compose
-    chmod +x /usr/local/bin/docker-compose
-fi
-
-echo "✓ Dependencies installed"
-REMOTE_SCRIPT
-
-echo -e "${GREEN}✓ Server setup complete${NC}"
+# Extract and deploy on server
+echo -e "${YELLOW}[4/7] Extracting package on server...${NC}"
+ssh $SSH_USER@$SERVER_IP << ENDSSH
+    set -e
+    cd /tmp
+    tar -xzf $PACKAGE_NAME
+    
+    # Backup existing deployment if it exists
+    if [ -d "$DEPLOY_DIR" ]; then
+        echo "Backing up existing deployment..."
+        sudo mv $DEPLOY_DIR ${DEPLOY_DIR}.backup.\$(date +%Y%m%d-%H%M%S) 2>/dev/null || true
+    fi
+    
+    # Move new deployment
+    sudo mkdir -p $DEPLOY_DIR
+    sudo mv cyber-defense/* $DEPLOY_DIR/
+    sudo chown -R $SSH_USER:$SSH_USER $DEPLOY_DIR
+    
+    # Cleanup
+    rm -rf cyber-defense $PACKAGE_NAME
+    
+    echo "✓ Package extracted to $DEPLOY_DIR"
+ENDSSH
+echo -e "${GREEN}✓ Package extracted${NC}"
 echo ""
 
-# Extract and deploy application
+# Run deployment script
 echo -e "${YELLOW}[5/7] Deploying application...${NC}"
-ssh "$SSH_USER@$SERVER_IP" bash << REMOTE_SCRIPT
-set -e
-
-# Create deployment directory
-DEPLOY_DIR="/opt/cyber-defense"
-mkdir -p "\$DEPLOY_DIR"
-
-# Extract package
-cd "\$DEPLOY_DIR"
-tar -xzf "/tmp/$PACKAGE_NAME"
-rm "/tmp/$PACKAGE_NAME"
-
-# Set permissions
-chmod +x *.sh 2>/dev/null || true
-
-echo "✓ Application deployed to \$DEPLOY_DIR"
-REMOTE_SCRIPT
-
+ssh $SSH_USER@$SERVER_IP "cd $DEPLOY_DIR && bash deploy.sh"
 echo -e "${GREEN}✓ Application deployed${NC}"
 echo ""
 
-# Configure firewall
-echo -e "${YELLOW}[6/7] Configuring firewall...${NC}"
-ssh "$SSH_USER@$SERVER_IP" bash << REMOTE_SCRIPT
-set -e
-
-# Enable firewall if not already enabled
-if ! ufw status | grep -q "Status: active"; then
-    ufw --force enable
-fi
-
-# Allow SSH (prevent lockout)
-ufw allow 22/tcp
-
-# Allow application ports
-ufw allow 8000/tcp   # Agent API
-ufw allow 3000/tcp   # Dashboard
-ufw allow 5432/tcp   # PostgreSQL (optional, for remote access)
-
-echo "✓ Firewall configured"
-REMOTE_SCRIPT
-
-echo -e "${GREEN}✓ Firewall configured${NC}"
-echo ""
-
-# Start application
-echo -e "${YELLOW}[7/7] Starting application...${NC}"
-ssh "$SSH_USER@$SERVER_IP" bash << 'REMOTE_SCRIPT'
-set -e
-
-cd /opt/cyber-defense
-
-# Start services
-docker-compose down 2>/dev/null || true
-docker-compose up -d
-
 # Wait for services to start
-echo "Waiting for services to initialize..."
+echo -e "${YELLOW}[6/7] Waiting for services to start...${NC}"
 sleep 15
-
-# Check status
-echo ""
-echo "Service Status:"
-docker-compose ps
-
-echo ""
-echo "Waiting for model download (may take 1-2 minutes)..."
-timeout 180 docker logs -f ollama-init 2>&1 | grep -m 1 "model ready" || echo "Model download in progress..."
-
-REMOTE_SCRIPT
-
-echo -e "${GREEN}✓ Application started${NC}"
+echo -e "${GREEN}✓ Services started${NC}"
 echo ""
 
-# Cleanup
-rm -rf "$TEMP_DIR"
+# Verify deployment
+echo -e "${YELLOW}[7/7] Verifying deployment...${NC}"
+echo ""
+echo "Testing AI Agent health..."
+if ssh $SSH_USER@$SERVER_IP "curl -sf http://localhost:8000/health" > /dev/null; then
+    echo -e "${GREEN}✓ AI Agent is healthy${NC}"
+    AGENT_INFO=$(ssh $SSH_USER@$SERVER_IP "curl -s http://localhost:8000/health")
+    echo "$AGENT_INFO" | jq '.' 2>/dev/null || echo "$AGENT_INFO"
+else
+    echo -e "${RED}✗ AI Agent not responding${NC}"
+fi
+echo ""
 
-# Display results
-echo -e "${BLUE}"
-echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║                                                              ║"
-echo "║  🎉 DEPLOYMENT SUCCESSFUL!                                   ║"
-echo "║                                                              ║"
-echo "╚══════════════════════════════════════════════════════════════╝"
-echo -e "${NC}"
+echo "Testing Dashboard health..."
+if ssh $SSH_USER@$SERVER_IP "curl -sf http://localhost:3000/health" > /dev/null; then
+    echo -e "${GREEN}✓ Dashboard is healthy${NC}"
+else
+    echo -e "${RED}✗ Dashboard not responding${NC}"
+fi
 echo ""
-echo -e "${GREEN}Access your application:${NC}"
+
+echo "Testing Database..."
+if ssh $SSH_USER@$SERVER_IP "docker exec cyber-events-db pg_isready -U postgres" > /dev/null 2>&1; then
+    echo -e "${GREEN}✓ Database is ready${NC}"
+else
+    echo -e "${RED}✗ Database not responding${NC}"
+fi
 echo ""
-echo "  📊 Dashboard:      http://$SERVER_IP:3000"
-echo "  🤖 Agent API:      http://$SERVER_IP:8000"
-echo "  📚 API Docs:       http://$SERVER_IP:8000/docs"
-echo "  💾 PostgreSQL:     $SERVER_IP:5432"
+
+# Cleanup local temp files
+rm -rf $TEMP_DIR
+
+# Print success message
+echo "════════════════════════════════════════════════════════"
+echo -e "${GREEN}✅ Deployment Successful!${NC}"
+echo "════════════════════════════════════════════════════════"
 echo ""
-echo -e "${GREEN}Useful commands:${NC}"
+echo "Access your services:"
+echo "  • AI Agent API: http://$SERVER_IP:8000"
+echo "  • API Documentation: http://$SERVER_IP:8000/docs"
+echo "  • Dashboard: http://$SERVER_IP:3000"
 echo ""
-echo "  # SSH into server"
-echo "  ssh $SSH_USER@$SERVER_IP"
+echo "Useful commands (run on server):"
+echo "  • View logs: ssh $SSH_USER@$SERVER_IP 'cd $DEPLOY_DIR && docker compose logs -f'"
+echo "  • Check status: ssh $SSH_USER@$SERVER_IP 'cd $DEPLOY_DIR && docker compose ps'"
+echo "  • Restart services: ssh $SSH_USER@$SERVER_IP 'cd $DEPLOY_DIR && docker compose restart'"
+echo "  • Stop services: ssh $SSH_USER@$SERVER_IP 'cd $DEPLOY_DIR && docker compose down'"
 echo ""
-echo "  # View logs"
-echo "  ssh $SSH_USER@$SERVER_IP 'cd /opt/cyber-defense && docker-compose logs -f'"
-echo ""
-echo "  # Check status"
-echo "  ssh $SSH_USER@$SERVER_IP 'cd /opt/cyber-defense && docker-compose ps'"
-echo ""
-echo "  # Restart services"
-echo "  ssh $SSH_USER@$SERVER_IP 'cd /opt/cyber-defense && docker-compose restart'"
-echo ""
-echo "  # Stop services"
-echo "  ssh $SSH_USER@$SERVER_IP 'cd /opt/cyber-defense && docker-compose down'"
-echo ""
-echo -e "${YELLOW}Note: The Qwen model is downloading in the background.${NC}"
-echo "      It will be ready in 1-2 minutes."
-echo ""
-echo -e "${GREEN}Next steps:${NC}"
-echo "  1. Open http://$SERVER_IP:3000 to view the dashboard"
-echo "  2. Test the API: curl http://$SERVER_IP:8000/health"
-echo "  3. Review logs: ssh $SSH_USER@$SERVER_IP 'cd /opt/cyber-defense && docker-compose logs'"
+echo "Next steps:"
+echo "  1. Open http://$SERVER_IP:3000 in your browser"
+echo "  2. Monitor logs: ssh $SSH_USER@$SERVER_IP 'cd $DEPLOY_DIR && docker compose logs -f'"
+echo "  3. Wait for event generation (every 30 minutes)"
 echo ""
