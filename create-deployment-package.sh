@@ -2,67 +2,86 @@
 # Create deployment package for Hetzner
 
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║  Creating Deployment Package                          ║"
+echo "║  Creating Deployment Package for Hetzner              ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
-PACKAGE_NAME="cyber-defense-$(date +%Y%m%d-%H%M%S).tar.gz"
+# Package name
+PACKAGE_NAME="cyber-agent-deployment.tar.gz"
+TEMP_DIR="cyber-agent"
 
-echo "Creating tar.gz package..."
-echo ""
+echo "1. Creating temporary directory..."
+rm -rf $TEMP_DIR
+mkdir -p $TEMP_DIR
 
-# Create temporary directory for clean packaging
-TEMP_DIR=$(mktemp -d)
-PROJECT_DIR="$TEMP_DIR/492-energy-defense"
+echo "2. Copying necessary files..."
 
-mkdir -p "$PROJECT_DIR"
+# Copy core application files
+cp -r agent $TEMP_DIR/
+cp -r backend $TEMP_DIR/
+cp -r dashboard $TEMP_DIR/
 
-# Copy essential files
-echo "Copying files..."
-cp -r agent "$PROJECT_DIR/"
-cp -r backend "$PROJECT_DIR/"
-cp -r dashboard "$PROJECT_DIR/"
-cp docker-compose.yml "$PROJECT_DIR/"
-cp .env.example "$PROJECT_DIR/"
-cp .gitignore "$PROJECT_DIR/" 2>/dev/null || true
-cp README.md "$PROJECT_DIR/" 2>/dev/null || true
+# Copy Docker configuration
+cp docker-compose.yml $TEMP_DIR/
+cp docker-compose-simple.yml $TEMP_DIR/
+cp .env.example $TEMP_DIR/.env
 
-# Copy deployment scripts
-cp start.sh "$PROJECT_DIR/" 2>/dev/null || true
-cp check-qwen-model.sh "$PROJECT_DIR/" 2>/dev/null || true
-cp apply-fix.sh "$PROJECT_DIR/" 2>/dev/null || true
+# Copy scripts
+cp start.sh $TEMP_DIR/
+cp test-llm-mode.sh $TEMP_DIR/
+cp check-qwen-model.sh $TEMP_DIR/
+cp apply-fix.sh $TEMP_DIR/
+cp manage.sh $TEMP_DIR/ 2>/dev/null || true
+cp test.sh $TEMP_DIR/ 2>/dev/null || true
 
-# Create the package
-cd "$TEMP_DIR"
-tar -czf "$PACKAGE_NAME" 492-energy-defense/
+# Copy documentation
+cp README.md $TEMP_DIR/
+cp FIX_QWEN_SCORING_ISSUE.md $TEMP_DIR/
+cp MIGRATION_COMPLETE.md $TEMP_DIR/ 2>/dev/null || true
 
-# Move to workspace
-mv "$PACKAGE_NAME" /workspace/
+# Copy gitignore as reference
+cp .gitignore $TEMP_DIR/
 
-# Cleanup
-cd /workspace
-rm -rf "$TEMP_DIR"
+echo "3. Cleaning up Python cache files..."
+find $TEMP_DIR -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+find $TEMP_DIR -type f -name "*.pyc" -delete 2>/dev/null || true
+find $TEMP_DIR -type f -name "*.pyo" -delete 2>/dev/null || true
+find $TEMP_DIR -type f -name ".DS_Store" -delete 2>/dev/null || true
+
+echo "4. Creating tar.gz archive..."
+tar -czf $PACKAGE_NAME $TEMP_DIR/
+
+echo "5. Cleaning up temporary directory..."
+rm -rf $TEMP_DIR
 
 echo ""
 echo "✅ Package created: $PACKAGE_NAME"
 echo ""
-echo "Package size:"
-du -h "/workspace/$PACKAGE_NAME"
+
+# Show package size
+SIZE=$(du -h $PACKAGE_NAME | cut -f1)
+echo "📦 Package size: $SIZE"
 echo ""
-echo "Contents:"
-tar -tzf "/workspace/$PACKAGE_NAME" | head -20
-echo "..."
+
+# Show contents
+echo "📋 Package contents:"
+tar -tzf $PACKAGE_NAME | head -20
+echo "   ... (and more)"
 echo ""
-echo "Next steps:"
-echo "1. Copy this file to your Hetzner server:"
-echo "   scp $PACKAGE_NAME root@YOUR_SERVER_IP:~/"
+
+echo "═══════════════════════════════════════════════════════"
+echo "NEXT STEPS:"
+echo "═══════════════════════════════════════════════════════"
 echo ""
-echo "2. SSH into your server and extract:"
+echo "1. Upload to Hetzner:"
+echo "   scp $PACKAGE_NAME root@YOUR_SERVER_IP:/root/"
+echo ""
+echo "2. SSH to server:"
 echo "   ssh root@YOUR_SERVER_IP"
+echo ""
+echo "3. Extract and run:"
 echo "   tar -xzf $PACKAGE_NAME"
-echo "   cd 492-energy-defense"
+echo "   cd cyber-agent"
+echo "   bash deploy-hetzner.sh"
 echo ""
-echo "3. Run the setup script on the server"
-echo ""
-echo "See HETZNER_DEPLOY_SIMPLE.md for full instructions"
 
