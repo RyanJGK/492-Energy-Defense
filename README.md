@@ -161,6 +161,22 @@ workspace/
 │       ├── index.html         # Alerts & Anomalies page
 │       ├── case-review.html   # Case Review page
 │       └── styles.css         # Modern dark theme
+├── model_analysis/                       # 🔍 Data Analysis & Model Performance
+│   ├── ANALYSIS.md
+│   ├── analysis.ipynb
+│   ├── analysis_results.csv
+│   ├── backup_20251121.sql
+│   ├── event_analyses.csv
+│   ├── firewall_logs.csv
+│   ├── login_events.csv
+│   ├── performance_analysis.png
+│   ├── performance_metrics.csv
+│   ├── public_event_analyses.csv
+│   ├── risk_score_distribution_custom.png
+│   ├── risk_score_distribution_data.csv
+│   ├── selected_data.sql
+│   ├── sql_combine_and_analysis_script
+│   └── summary_report.txt
 ├── docker-compose.yml         # Service orchestration
 ├── README.md
 ├── DASHBOARD_README.md        # Dashboard documentation
