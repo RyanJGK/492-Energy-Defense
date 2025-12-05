@@ -1,12 +1,11 @@
 #!/bin/bash
-# Hetzner Server Setup Script
-# Run this ON the Hetzner server as root
+# Hetzner server setup script - Run this ON the Hetzner server as root
 
 set -e
 
-echo "╔══════════════════════════════════════════════════════════╗"
-echo "║  492-Energy-Defense - Hetzner Server Setup              ║"
-echo "╚══════════════════════════════════════════════════════════╝"
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║  492-Energy-Defense - Hetzner Setup                   ║"
+echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
 # Colors
@@ -17,111 +16,105 @@ NC='\033[0m'
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
-    echo -e "${RED}Please run as root (use: sudo bash hetzner-setup.sh)${NC}"
+    echo -e "${RED}Please run as root${NC}"
     exit 1
 fi
 
-echo -e "${YELLOW}[1/8] Updating system packages...${NC}"
-apt-get update -qq
-apt-get upgrade -y -qq
-echo -e "${GREEN}✓ System updated${NC}"
-echo ""
+echo -e "${YELLOW}[1/6] Updating system...${NC}"
+apt-get update
+apt-get upgrade -y
 
-echo -e "${YELLOW}[2/8] Installing required packages...${NC}"
-apt-get install -y -qq \
-    curl \
-    wget \
-    git \
-    jq \
-    ufw \
-    htop \
-    ca-certificates \
-    gnupg \
-    lsb-release
-echo -e "${GREEN}✓ Packages installed${NC}"
 echo ""
+echo -e "${YELLOW}[2/6] Installing Docker...${NC}"
+if ! command -v docker &> /dev/null; then
+    # Install Docker
+    apt-get install -y \
+        ca-certificates \
+        curl \
+        gnupg \
+        lsb-release
 
-echo -e "${YELLOW}[3/8] Installing Docker...${NC}"
-if command -v docker &> /dev/null; then
-    echo "Docker already installed"
-else
     # Add Docker's official GPG key
-    install -m 0755 -d /etc/apt/keyrings
+    mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
 
-    # Add the repository to Apt sources
+    # Set up repository
     echo \
-      "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-      tee /etc/apt/sources.list.d/docker.list > /dev/null
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-    apt-get update -qq
-    apt-get install -y -qq docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-fi
-echo -e "${GREEN}✓ Docker installed${NC}"
-echo ""
+    # Install Docker Engine
+    apt-get update
+    apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 
-echo -e "${YELLOW}[4/8] Starting Docker service...${NC}"
-systemctl enable docker
-systemctl start docker
-echo -e "${GREEN}✓ Docker running${NC}"
-echo ""
-
-echo -e "${YELLOW}[5/8] Creating deployment user...${NC}"
-if id "cyber" &>/dev/null; then
-    echo "User 'cyber' already exists"
+    # Start Docker
+    systemctl start docker
+    systemctl enable docker
+    
+    echo -e "${GREEN}✓ Docker installed${NC}"
 else
-    useradd -m -s /bin/bash cyber
-    usermod -aG docker cyber
-    echo -e "${GREEN}✓ User 'cyber' created${NC}"
+    echo -e "${GREEN}✓ Docker already installed${NC}"
 fi
-echo ""
 
-echo -e "${YELLOW}[6/8] Setting up firewall...${NC}"
+echo ""
+echo -e "${YELLOW}[3/6] Installing Docker Compose (standalone)...${NC}"
+if ! command -v docker-compose &> /dev/null; then
+    curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+    echo -e "${GREEN}✓ Docker Compose installed${NC}"
+else
+    echo -e "${GREEN}✓ Docker Compose already installed${NC}"
+fi
+
+echo ""
+echo -e "${YELLOW}[4/6] Installing additional utilities...${NC}"
+apt-get install -y curl wget git jq htop vim
+
+echo ""
+echo -e "${YELLOW}[5/6] Configuring firewall...${NC}"
 ufw --force enable
-ufw default deny incoming
-ufw default allow outgoing
-ufw allow 22/tcp comment 'SSH'
-ufw allow 8000/tcp comment 'Agent API'
-ufw allow 3000/tcp comment 'Dashboard'
-ufw allow 5432/tcp comment 'PostgreSQL (optional)'
-ufw --force reload
+ufw allow 22/tcp   # SSH
+ufw allow 8000/tcp # Agent API
+ufw allow 3000/tcp # Dashboard
+ufw allow 5432/tcp # PostgreSQL (optional, for external access)
 echo -e "${GREEN}✓ Firewall configured${NC}"
+
 echo ""
+echo -e "${YELLOW}[6/6] Creating project directory...${NC}"
+INSTALL_DIR="/opt/cyber-defense"
+mkdir -p "$INSTALL_DIR"
 
-echo -e "${YELLOW}[7/8] Creating project directory...${NC}"
-mkdir -p /home/cyber/492-energy-defense
-chown -R cyber:cyber /home/cyber/492-energy-defense
-echo -e "${GREEN}✓ Directory created${NC}"
-echo ""
-
-echo -e "${YELLOW}[8/8] Optimizing system...${NC}"
-# Increase max open files
-echo "fs.file-max = 65536" >> /etc/sysctl.conf
-sysctl -p > /dev/null 2>&1
-
-# Enable swap if not present
-if [ $(swapon --show | wc -l) -eq 0 ]; then
-    fallocate -l 4G /swapfile
-    chmod 600 /swapfile
-    mkswap /swapfile > /dev/null 2>&1
-    swapon /swapfile
-    echo '/swapfile none swap sw 0 0' | tee -a /etc/fstab > /dev/null
-    echo -e "${GREEN}✓ 4GB swap created${NC}"
+# If we're in the extracted directory, copy files
+if [ -f "docker-compose.yml" ]; then
+    echo "Copying project files to $INSTALL_DIR..."
+    cp -r . "$INSTALL_DIR/"
+    cd "$INSTALL_DIR"
 else
-    echo "Swap already configured"
+    echo "Project files should already be in: $INSTALL_DIR"
 fi
-echo ""
 
-echo "════════════════════════════════════════════════════════════"
-echo -e "${GREEN}✅ Hetzner server setup complete!${NC}"
-echo "════════════════════════════════════════════════════════════"
+echo ""
+echo "════════════════════════════════════════════════════════"
+echo -e "${GREEN}Setup Complete!${NC}"
+echo "════════════════════════════════════════════════════════"
+echo ""
+echo "Docker version:"
+docker --version
+docker-compose --version
 echo ""
 echo "Next steps:"
-echo "1. Switch to deployment user: su - cyber"
-echo "2. Upload project files to: /home/cyber/492-energy-defense"
-echo "3. Run: cd /home/cyber/492-energy-defense && docker compose up -d"
+echo "  1. cd $INSTALL_DIR"
+echo "  2. Choose your fix: ./apply-fix.sh (recommended: option 1 for rule-based)"
+echo "  3. Start system: docker-compose up -d"
+echo "  4. Watch logs: docker logs -f ollama-init"
+echo "  5. Test: curl http://localhost:8000/health"
 echo ""
-echo "Server is ready for deployment!"
+echo "Access the system:"
+echo "  - Agent API: http://$(curl -s ifconfig.me):8000"
+echo "  - Dashboard: http://$(curl -s ifconfig.me):3000"
+echo ""
+echo "Monitor:"
+echo "  docker-compose ps     # Check status"
+echo "  docker-compose logs   # View logs"
+echo "  ./check-qwen-model.sh # Verify model"
 echo ""
