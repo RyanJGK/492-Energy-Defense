@@ -1,5 +1,5 @@
 #!/bin/bash
-# One-command deployment script for Hetzner
+# One-Command Hetzner Deployment Script
 # Usage: ./deploy-to-hetzner.sh <server-ip> [ssh-user]
 
 set -e
@@ -11,37 +11,37 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo ""
-echo "╔══════════════════════════════════════════════════════════╗"
-echo "║  492-Energy-Defense - Hetzner Deployment                ║"
-echo "╚══════════════════════════════════════════════════════════╝"
+echo "╔════════════════════════════════════════════════════════════════╗"
+echo "║  492-ENERGY-DEFENSE - Hetzner Deployment                      ║"
+echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
 # Check arguments
 if [ -z "$1" ]; then
-    echo -e "${RED}Error: Server IP address required${NC}"
+    echo -e "${RED}Error: Server IP required${NC}"
     echo ""
-    echo "Usage: ./deploy-to-hetzner.sh <SERVER_IP> [SSH_USER]"
+    echo "Usage: ./deploy-to-hetzner.sh <server-ip> [ssh-user]"
     echo ""
     echo "Example:"
     echo "  ./deploy-to-hetzner.sh 65.21.123.45"
-    echo "  ./deploy-to-hetzner.sh 65.21.123.45 root"
+    echo "  ./deploy-to-hetzner.sh 65.21.123.45 ubuntu"
     echo ""
     exit 1
 fi
 
 SERVER_IP="$1"
 SSH_USER="${2:-root}"
-APP_DIR="/home/cyber/cyber-defense"
+APP_DIR="/opt/cyber-defense"
 
-echo -e "${BLUE}Target Server:${NC} $SERVER_IP"
-echo -e "${BLUE}SSH User:${NC} $SSH_USER"
-echo -e "${BLUE}Install Directory:${NC} $APP_DIR"
+echo -e "${BLUE}Deployment Configuration:${NC}"
+echo "  Server IP: $SERVER_IP"
+echo "  SSH User: $SSH_USER"
+echo "  Install Directory: $APP_DIR"
 echo ""
 
 # Test SSH connection
 echo -e "${YELLOW}[1/8] Testing SSH connection...${NC}"
-if ssh -o ConnectTimeout=10 -o BatchMode=yes $SSH_USER@$SERVER_IP exit 2>/dev/null; then
+if ssh -o ConnectTimeout=10 -o BatchMode=yes "$SSH_USER@$SERVER_IP" exit 2>/dev/null; then
     echo -e "${GREEN}✓ SSH connection successful${NC}"
 else
     echo -e "${RED}✗ Cannot connect to server${NC}"
@@ -49,99 +49,183 @@ else
     echo "Please ensure:"
     echo "  1. Server IP is correct: $SERVER_IP"
     echo "  2. SSH key is configured"
-    echo "  3. Server is running"
+    echo "  3. User exists: $SSH_USER"
     echo ""
-    echo "Test manually: ssh $SSH_USER@$SERVER_IP"
     exit 1
 fi
 echo ""
 
-# Setup server (install Docker, create user, etc.)
-echo -e "${YELLOW}[2/8] Setting up server environment...${NC}"
-ssh $SSH_USER@$SERVER_IP 'bash -s' < ./deployment/server-setup.sh
-echo -e "${GREEN}✓ Server environment ready${NC}"
+# Create deployment package
+echo -e "${YELLOW}[2/8] Creating deployment package...${NC}"
+TEMP_DIR=$(mktemp -d)
+tar czf "$TEMP_DIR/cyber-defense.tar.gz" \
+    --exclude='.git' \
+    --exclude='__pycache__' \
+    --exclude='*.pyc' \
+    --exclude='.env' \
+    --exclude='node_modules' \
+    --exclude='venv' \
+    .
+
+echo -e "${GREEN}✓ Package created: $(du -h "$TEMP_DIR/cyber-defense.tar.gz" | cut -f1)${NC}"
 echo ""
 
-# Create app directory
-echo -e "${YELLOW}[3/8] Creating application directory...${NC}"
-ssh $SSH_USER@$SERVER_IP "mkdir -p $APP_DIR"
-echo -e "${GREEN}✓ Directory created${NC}"
+# Copy package to server
+echo -e "${YELLOW}[3/8] Uploading to server...${NC}"
+ssh "$SSH_USER@$SERVER_IP" "mkdir -p $APP_DIR"
+scp -q "$TEMP_DIR/cyber-defense.tar.gz" "$SSH_USER@$SERVER_IP:$APP_DIR/"
+echo -e "${GREEN}✓ Upload complete${NC}"
 echo ""
 
-# Copy project files
-echo -e "${YELLOW}[4/8] Copying project files...${NC}"
-rsync -avz --exclude='.git' \
-           --exclude='__pycache__' \
-           --exclude='*.pyc' \
-           --exclude='.env' \
-           --exclude='venv' \
-           --exclude='node_modules' \
-           ./ $SSH_USER@$SERVER_IP:$APP_DIR/
-echo -e "${GREEN}✓ Files copied${NC}"
+# Install dependencies on server
+echo -e "${YELLOW}[4/8] Installing server dependencies...${NC}"
+ssh "$SSH_USER@$SERVER_IP" bash << 'ENDSSH'
+set -e
+
+# Update system
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -qq
+apt-get upgrade -y -qq
+
+# Install Docker if not present
+if ! command -v docker &> /dev/null; then
+    echo "Installing Docker..."
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sh get-docker.sh > /dev/null 2>&1
+    rm get-docker.sh
+    systemctl enable docker
+    systemctl start docker
+fi
+
+# Install Docker Compose if not present
+if ! command -v docker-compose &> /dev/null; then
+    echo "Installing Docker Compose..."
+    COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\" -f4)
+    curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+    chmod +x /usr/local/bin/docker-compose
+fi
+
+# Install other utilities
+apt-get install -y -qq curl jq git htop
+
+echo "✓ Dependencies installed"
+ENDSSH
+echo -e "${GREEN}✓ Server dependencies ready${NC}"
 echo ""
+
+# Extract and setup application
+echo -e "${YELLOW}[5/8] Setting up application...${NC}"
+ssh "$SSH_USER@$SERVER_IP" bash << ENDSSH
+set -e
+cd $APP_DIR
+tar xzf cyber-defense.tar.gz
+rm cyber-defense.tar.gz
 
 # Set permissions
-echo -e "${YELLOW}[5/8] Setting permissions...${NC}"
-ssh $SSH_USER@$SERVER_IP "cd $APP_DIR && chmod +x *.sh && chown -R cyber:cyber $APP_DIR"
-echo -e "${GREEN}✓ Permissions set${NC}"
+chmod +x *.sh 2>/dev/null || true
+chmod +x check-qwen-model.sh 2>/dev/null || true
+
+# Create .env file if it doesn't exist
+if [ ! -f .env ]; then
+    cp .env.example .env
+fi
+
+echo "✓ Application extracted and configured"
+ENDSSH
+echo -e "${GREEN}✓ Application setup complete${NC}"
 echo ""
 
-# Pull Docker images and build
-echo -e "${YELLOW}[6/8] Building Docker images...${NC}"
-ssh $SSH_USER@$SERVER_IP "cd $APP_DIR && docker-compose build"
-echo -e "${GREEN}✓ Images built${NC}"
+# Configure firewall
+echo -e "${YELLOW}[6/8] Configuring firewall...${NC}"
+ssh "$SSH_USER@$SERVER_IP" bash << 'ENDSSH'
+set -e
+
+# Install UFW if not present
+if ! command -v ufw &> /dev/null; then
+    apt-get install -y -qq ufw
+fi
+
+# Configure firewall
+ufw --force enable
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp    # SSH
+ufw allow 3000/tcp  # Dashboard
+ufw allow 8000/tcp  # Agent API
+ufw --force reload
+
+echo "✓ Firewall configured"
+ENDSSH
+echo -e "${GREEN}✓ Firewall rules applied${NC}"
 echo ""
 
-# Start services
-echo -e "${YELLOW}[7/8] Starting services...${NC}"
-ssh $SSH_USER@$SERVER_IP "cd $APP_DIR && docker-compose up -d"
-echo -e "${GREEN}✓ Services started${NC}"
+# Start the application
+echo -e "${YELLOW}[7/8] Starting application...${NC}"
+ssh "$SSH_USER@$SERVER_IP" bash << ENDSSH
+set -e
+cd $APP_DIR
+
+# Stop any existing containers
+docker-compose down 2>/dev/null || true
+
+# Pull images and start
+docker-compose pull -q
+docker-compose up -d
+
+echo "✓ Application started"
+ENDSSH
+echo -e "${GREEN}✓ Application is starting${NC}"
 echo ""
 
-# Wait for services to be ready
-echo -e "${YELLOW}[8/8] Waiting for services to initialize...${NC}"
-echo "This may take 2-3 minutes while the Qwen model downloads..."
+# Wait for services and verify
+echo -e "${YELLOW}[8/8] Verifying deployment...${NC}"
+echo "Waiting for services to initialize (30 seconds)..."
 sleep 30
 
-# Check service status
-echo ""
-echo -e "${YELLOW}Checking service health...${NC}"
-ssh $SSH_USER@$SERVER_IP "cd $APP_DIR && docker-compose ps"
+# Check if services are running
+ssh "$SSH_USER@$SERVER_IP" "cd $APP_DIR && docker-compose ps"
 echo ""
 
-# Display access information
-echo "╔══════════════════════════════════════════════════════════╗"
-echo "║  🎉 Deployment Complete!                                 ║"
-echo "╚══════════════════════════════════════════════════════════╝"
+# Test endpoints
+echo "Testing endpoints..."
+if curl -sf "http://$SERVER_IP:8000/health" > /dev/null; then
+    echo -e "${GREEN}✓ Agent API is responding${NC}"
+else
+    echo -e "${YELLOW}⚠ Agent API not responding yet (may still be starting)${NC}"
+fi
+
+if curl -sf "http://$SERVER_IP:3000/health" > /dev/null; then
+    echo -e "${GREEN}✓ Dashboard is responding${NC}"
+else
+    echo -e "${YELLOW}⚠ Dashboard not responding yet (may still be starting)${NC}"
+fi
 echo ""
-echo -e "${GREEN}Your cybersecurity agent is now running!${NC}"
+
+# Cleanup
+rm -rf "$TEMP_DIR"
+
+echo "════════════════════════════════════════════════════════════════"
+echo -e "${GREEN}✅ DEPLOYMENT COMPLETE!${NC}"
+echo "════════════════════════════════════════════════════════════════"
 echo ""
-echo "📊 Access URLs:"
-echo "   • Dashboard:    http://$SERVER_IP:3000"
-echo "   • Agent API:    http://$SERVER_IP:8000"
-echo "   • API Docs:     http://$SERVER_IP:8000/docs"
-echo "   • Health Check: http://$SERVER_IP:8000/health"
+echo "🌐 Access your services:"
+echo "   Dashboard:  http://$SERVER_IP:3000"
+echo "   Agent API:  http://$SERVER_IP:8000"
+echo "   API Docs:   http://$SERVER_IP:8000/docs"
 echo ""
-echo "🔒 Next Steps:"
-echo "   1. Configure firewall (if needed):"
-echo "      ssh $SSH_USER@$SERVER_IP 'ufw allow 3000/tcp && ufw allow 8000/tcp'"
-echo ""
-echo "   2. Watch the logs:"
-echo "      ssh $SSH_USER@$SERVER_IP 'cd $APP_DIR && docker-compose logs -f'"
-echo ""
-echo "   3. Test the deployment:"
-echo "      curl http://$SERVER_IP:8000/health | jq"
-echo ""
-echo "   4. Run tests:"
-echo "      ssh $SSH_USER@$SERVER_IP 'cd $APP_DIR && ./test-llm-mode.sh'"
-echo ""
-echo "📝 Management Commands (on server):"
+echo "📊 Useful commands (run on server):"
 echo "   cd $APP_DIR"
-echo "   docker-compose ps          # Check status"
-echo "   docker-compose logs -f     # View logs"
-echo "   docker-compose restart     # Restart all"
-echo "   docker-compose down        # Stop all"
-echo "   ./check-qwen-model.sh      # Verify model"
+echo "   docker-compose ps              # Check status"
+echo "   docker-compose logs -f         # View logs"
+echo "   docker-compose restart         # Restart services"
+echo "   ./check-qwen-model.sh          # Verify Qwen model"
 echo ""
-echo "═══════════════════════════════════════════════════════════"
+echo "📝 SSH into server:"
+echo "   ssh $SSH_USER@$SERVER_IP"
+echo ""
+echo "⏳ Note: First run will download Qwen model (~400MB)"
+echo "   This takes 1-2 minutes. Monitor with:"
+echo "   ssh $SSH_USER@$SERVER_IP 'cd $APP_DIR && docker logs -f ollama-init'"
+echo ""
+echo "🎉 Deployment successful!"
 echo ""
