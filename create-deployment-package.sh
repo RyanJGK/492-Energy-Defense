@@ -2,117 +2,43 @@
 # Create deployment package for Hetzner
 
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║  Creating Deployment Package for Hetzner              ║"
+echo "║  Creating Hetzner Deployment Package                  ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
 
-PACKAGE_NAME="cyber-defense-qwen-deploy.tar.gz"
+PACKAGE_NAME="cyber-defense-deployment.tar.gz"
+TEMP_DIR="cyber-defense-deploy"
 
-echo "📦 Packaging files..."
+echo "[1/4] Creating temporary directory..."
+rm -rf $TEMP_DIR
+mkdir -p $TEMP_DIR
 
-# Create temporary directory for clean packaging
-mkdir -p /tmp/cyber-defense-deploy
+echo "[2/4] Copying necessary files..."
 
-# Copy necessary files
-echo "  → Copying application files..."
-cp -r agent /tmp/cyber-defense-deploy/
-cp -r backend /tmp/cyber-defense-deploy/
-cp -r dashboard /tmp/cyber-defense-deploy/
-cp docker-compose.yml /tmp/cyber-defense-deploy/
-cp docker-compose-simple.yml /tmp/cyber-defense-deploy/
-cp .env.example /tmp/cyber-defense-deploy/
-cp .gitignore /tmp/cyber-defense-deploy/ 2>/dev/null || true
+# Copy core application files
+cp -r agent $TEMP_DIR/
+cp -r backend $TEMP_DIR/
+cp -r dashboard $TEMP_DIR/
+cp docker-compose.yml $TEMP_DIR/
+cp .env.example $TEMP_DIR/.env
 
-echo "  → Copying scripts..."
-cp start.sh /tmp/cyber-defense-deploy/
-cp test-llm-mode.sh /tmp/cyber-defense-deploy/
-cp troubleshoot.sh /tmp/cyber-defense-deploy/
-cp check-qwen-model.sh /tmp/cyber-defense-deploy/
-cp apply-fix.sh /tmp/cyber-defense-deploy/
+# Copy scripts
+cp start.sh $TEMP_DIR/
+cp test-llm-mode.sh $TEMP_DIR/
+cp check-qwen-model.sh $TEMP_DIR/
+cp apply-fix.sh $TEMP_DIR/
 
-echo "  → Copying documentation..."
-cp README.md /tmp/cyber-defense-deploy/
-cp PROJECT_SUMMARY.md /tmp/cyber-defense-deploy/ 2>/dev/null || true
-cp FIX_QWEN_SCORING_ISSUE.md /tmp/cyber-defense-deploy/ 2>/dev/null || true
-cp MIGRATION_COMPLETE.md /tmp/cyber-defense-deploy/ 2>/dev/null || true
-cp HETZNER_DEPLOYMENT_GUIDE.md /tmp/cyber-defense-deploy/ 2>/dev/null || true
+# Copy essential documentation
+cp README.md $TEMP_DIR/
+cp MIGRATION_COMPLETE.md $TEMP_DIR/ 2>/dev/null || true
+cp FIX_QWEN_SCORING_ISSUE.md $TEMP_DIR/ 2>/dev/null || true
 
-# Create deployment instructions
-cat > /tmp/cyber-defense-deploy/DEPLOY.md << 'DEPLOYEOF'
-# Quick Deployment to Hetzner
+echo "[3/4] Creating deployment scripts..."
 
-## On Your Local Machine
-
-1. Upload this package to your server:
-```bash
-scp cyber-defense-qwen-deploy.tar.gz root@YOUR_SERVER_IP:/root/
-```
-
-## On Hetzner Server (as root)
-
-1. Extract the package:
-```bash
-cd /root
-tar -xzf cyber-defense-qwen-deploy.tar.gz
-cd cyber-defense-deploy
-```
-
-2. Install Docker (if not already installed):
-```bash
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
-```
-
-3. Start the system:
-```bash
-chmod +x *.sh
-docker-compose up -d
-```
-
-4. Watch the model download:
-```bash
-docker logs -f ollama-init
-# Wait for "Qwen model ready!"
-```
-
-5. Test it works:
-```bash
-./check-qwen-model.sh
-```
-
-## Access the System
-
-- **Dashboard**: http://YOUR_SERVER_IP:3000
-- **API**: http://YOUR_SERVER_IP:8000
-- **API Docs**: http://YOUR_SERVER_IP:8000/docs
-
-## Configure Firewall (Optional but Recommended)
-
-```bash
-ufw allow 22/tcp    # SSH
-ufw allow 3000/tcp  # Dashboard
-ufw allow 8000/tcp  # API
-ufw enable
-```
-
-## Troubleshooting
-
-If issues occur:
-```bash
-./troubleshoot.sh
-```
-
-To use rule-based mode (no LLM, more reliable):
-```bash
-./apply-fix.sh
-# Choose option 1
-```
-DEPLOYEOF
-
-# Create quick setup script for server
-cat > /tmp/cyber-defense-deploy/setup-server.sh << 'SETUPEOF'
+# Create server setup script
+cat > $TEMP_DIR/setup-server.sh << 'SETUP'
 #!/bin/bash
-# Quick setup script for Hetzner server
+# Setup script for Hetzner server
 
 echo "╔════════════════════════════════════════════════════════╗"
 echo "║  492-Energy-Defense - Hetzner Setup                   ║"
@@ -121,104 +47,151 @@ echo ""
 
 # Check if running as root
 if [ "$EUID" -ne 0 ]; then 
-    echo "❌ Please run as root"
+    echo "Please run as root (use: sudo bash setup-server.sh)"
     exit 1
 fi
 
-echo "📦 Step 1: Installing Docker..."
+echo "[1/6] Updating system..."
+apt-get update -qq
+apt-get upgrade -y -qq
+
+echo "[2/6] Installing Docker..."
 if ! command -v docker &> /dev/null; then
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
     rm get-docker.sh
-    echo "✅ Docker installed"
+    systemctl enable docker
+    systemctl start docker
+    echo "✓ Docker installed"
 else
-    echo "✅ Docker already installed"
+    echo "✓ Docker already installed"
 fi
 
-echo ""
-echo "🔧 Step 2: Installing Docker Compose..."
+echo "[3/6] Installing Docker Compose..."
 if ! command -v docker-compose &> /dev/null; then
-    # Install docker-compose
     curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
-    echo "✅ Docker Compose installed"
+    echo "✓ Docker Compose installed"
 else
-    echo "✅ Docker Compose already installed"
+    echo "✓ Docker Compose already installed"
 fi
 
-echo ""
-echo "📝 Step 3: Creating environment file..."
+echo "[4/6] Configuring firewall..."
+if command -v ufw &> /dev/null; then
+    ufw --force enable
+    ufw allow 22/tcp    # SSH
+    ufw allow 8000/tcp  # Agent API
+    ufw allow 3000/tcp  # Dashboard
+    ufw allow 11434/tcp # Ollama
+    echo "✓ Firewall configured"
+else
+    echo "⚠ UFW not available, skipping firewall setup"
+fi
+
+echo "[5/6] Setting up application directory..."
+APP_DIR="/opt/cyber-defense"
+mkdir -p $APP_DIR
+cp -r ./* $APP_DIR/
+cd $APP_DIR
+chmod +x *.sh
+
+echo "[6/6] Creating environment file..."
 if [ ! -f .env ]; then
     cp .env.example .env
-    echo "✅ Created .env file"
-else
-    echo "✅ .env file already exists"
+    echo "✓ Environment file created"
 fi
-
-echo ""
-echo "🚀 Step 4: Starting services..."
-chmod +x *.sh
-docker-compose up -d
-
-echo ""
-echo "⏳ Step 5: Waiting for model download..."
-echo "   (This will take 1-2 minutes)"
-sleep 15
-
-echo ""
-echo "📊 Checking status..."
-docker-compose ps
 
 echo ""
 echo "╔════════════════════════════════════════════════════════╗"
-echo "║  🎉 Setup Complete!                                   ║"
+echo "║  Setup Complete!                                       ║"
 echo "╚════════════════════════════════════════════════════════╝"
 echo ""
-echo "Your services are starting up..."
+echo "Application installed in: $APP_DIR"
 echo ""
-echo "🌐 Access Points:"
-echo "   • Dashboard: http://$(hostname -I | awk '{print $1}'):3000"
-echo "   • API:       http://$(hostname -I | awk '{print $1}'):8000"
-echo "   • API Docs:  http://$(hostname -I | awk '{print $1}'):8000/docs"
+echo "Next steps:"
+echo "  1. cd $APP_DIR"
+echo "  2. ./start-services.sh"
 echo ""
-echo "📝 Next Steps:"
-echo "   1. Wait 2-3 minutes for initialization"
-echo "   2. Check model status: ./check-qwen-model.sh"
-echo "   3. Monitor logs: docker-compose logs -f"
-echo ""
-echo "🔒 Security Recommendations:"
-echo "   • Configure firewall: ufw allow 22,3000,8000/tcp && ufw enable"
-echo "   • Change database password in docker-compose.yml"
-echo "   • Use HTTPS in production"
-echo ""
-SETUPEOF
+SETUP
 
-chmod +x /tmp/cyber-defense-deploy/setup-server.sh
+chmod +x $TEMP_DIR/setup-server.sh
 
-# Create the tar.gz
+# Create service start script
+cat > $TEMP_DIR/start-services.sh << 'START'
+#!/bin/bash
+# Start all services
+
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║  Starting 492-Energy-Defense Services                 ║"
+echo "╚════════════════════════════════════════════════════════╝"
 echo ""
-echo "📦 Creating archive..."
-cd /tmp
-tar -czf "/workspace/${PACKAGE_NAME}" cyber-defense-deploy/
 
-# Cleanup
-rm -rf /tmp/cyber-defense-deploy
+echo "[1/3] Starting Docker containers..."
+docker-compose up -d
 
 echo ""
-echo "✅ Package created: ${PACKAGE_NAME}"
+echo "[2/3] Waiting for services to initialize..."
+echo "This will take 1-2 minutes for model download..."
+sleep 10
+
 echo ""
-echo "📊 Package size:"
-ls -lh "/workspace/${PACKAGE_NAME}" | awk '{print "   " $5}'
+echo "[3/3] Monitoring startup (press Ctrl+C when you see 'Qwen model ready!')..."
+docker-compose logs -f ollama-init
+
 echo ""
-echo "📤 To deploy to Hetzner:"
+echo "╔════════════════════════════════════════════════════════╗"
+echo "║  Services Started!                                     ║"
+echo "╚════════════════════════════════════════════════════════╝"
 echo ""
-echo "1. Upload to your server:"
-echo "   scp ${PACKAGE_NAME} root@YOUR_SERVER_IP:/root/"
+echo "Access the services:"
+echo "  • Dashboard: http://$(curl -s ifconfig.me):3000"
+echo "  • Agent API: http://$(curl -s ifconfig.me):8000"
+echo "  • API Docs:  http://$(curl -s ifconfig.me):8000/docs"
 echo ""
-echo "2. On the server, extract and run:"
-echo "   cd /root"
-echo "   tar -xzf ${PACKAGE_NAME}"
-echo "   cd cyber-defense-deploy"
-echo "   ./setup-server.sh"
+echo "Useful commands:"
+echo "  docker-compose ps        # Check status"
+echo "  docker-compose logs -f   # View logs"
+echo "  docker-compose down      # Stop services"
 echo ""
-echo "Done! 🚀"
+START
+
+chmod +x $TEMP_DIR/start-services.sh
+
+# Create quick check script
+cat > $TEMP_DIR/check-status.sh << 'CHECK'
+#!/bin/bash
+# Quick status check
+
+echo "Service Status:"
+docker-compose ps
+
+echo ""
+echo "Model Status:"
+docker exec ollama-qwen ollama list 2>/dev/null || echo "Ollama not ready yet"
+
+echo ""
+echo "Agent Health:"
+curl -s http://localhost:8000/health | jq 2>/dev/null || echo "Agent not ready yet"
+
+echo ""
+echo "Public IP: $(curl -s ifconfig.me)"
+CHECK
+
+chmod +x $TEMP_DIR/check-status.sh
+
+echo "[4/4] Creating tar.gz package..."
+tar -czf $PACKAGE_NAME $TEMP_DIR
+rm -rf $TEMP_DIR
+
+echo ""
+echo "✅ Package created: $PACKAGE_NAME"
+echo ""
+echo "Size: $(du -h $PACKAGE_NAME | cut -f1)"
+echo ""
+echo "Next steps:"
+echo "  1. Upload to Hetzner: scp $PACKAGE_NAME root@YOUR_SERVER_IP:/root/"
+echo "  2. SSH to server:      ssh root@YOUR_SERVER_IP"
+echo "  3. Extract:            tar -xzf $PACKAGE_NAME"
+echo "  4. Run setup:          cd cyber-defense-deploy && bash setup-server.sh"
+echo "  5. Start services:     ./start-services.sh"
+echo ""
