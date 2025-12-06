@@ -9,13 +9,13 @@
 
 ## 1) Live Demo
 
-**Synthetic Industry:** _____  
+**Synthetic Industry:** IT events generated in the context of an Energy Company
 **Status:** Up/Down  
-**Test Credentials (fake):** _____
+**Test Credentials:** N/A
 
-**Agentic System:** _____  
+**Agentic System:** Rule based system for judgement of logs with Agentic Analysis done by qwen model  
 **Status:** Up/Down  
-**Notes:** Dashboard running on Hetzner with Ollama-based analysis
+**Notes:** Dashboard running on Hetzner or locally with Ollama-based analysis
 
 **Logs/Observability:** Available via Docker logs (`docker logs cyber-agent`, `docker logs cyber-backend`)
 
