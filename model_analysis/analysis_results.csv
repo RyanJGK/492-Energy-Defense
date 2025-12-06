@@ -1,0 +1,101 @@
+event_type,event_id,label,id,risk_score,severity,reasoning,recommended_action,analyzed_at,classification
+login,1,0,1.0,10.0,low,Login during 00:00-05:00 hours (+10),"Continue normal monitoring, log event for baseline analysis",2025-11-20 05:49:10.958234,TN
+login,2,1,3.0,40.0,medium,Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"Monitor account for additional suspicious activity, verify with user if unexpected",2025-11-20 05:49:10.995661,FN
+login,3,1,2.0,100.0,critical,Failed login attempt (+30); Admin account targeted (+40); Suspicious source IP detected (+30),"IMMEDIATE: Lock account, investigate source IP, review all recent activity from this user/IP",2025-11-20 05:49:10.986513,TP
+login,4,1,9.0,40.0,medium,Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"Monitor account for additional suspicious activity, verify with user if unexpected",2025-11-20 05:49:10.994225,FN
+login,5,1,8.0,70.0,high,Failed login attempt (+30); Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"Investigate login source, verify user identity, consider temporary account restriction",2025-11-20 05:49:10.993121,TP
+login,6,1,5.0,90.0,critical,Failed login attempt (+30); 3rd+ failure in short time window (+20); Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"IMMEDIATE: Lock account, investigate source IP, review all recent activity from this user/IP",2025-11-20 05:49:10.991236,TP
+login,7,1,7.0,90.0,critical,Failed login attempt (+30); 3rd+ failure in short time window (+20); Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"IMMEDIATE: Lock account, investigate source IP, review all recent activity from this user/IP",2025-11-20 05:49:10.989652,TP
+login,8,1,6.0,90.0,critical,Failed login attempt (+30); 3rd+ failure in short time window (+20); Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"IMMEDIATE: Lock account, investigate source IP, review all recent activity from this user/IP",2025-11-20 05:49:11.000571,TP
+login,9,1,4.0,90.0,critical,Failed login attempt (+30); 3rd+ failure in short time window (+20); Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"IMMEDIATE: Lock account, investigate source IP, review all recent activity from this user/IP",2025-11-20 05:49:10.988056,TP
+login,10,1,10.0,90.0,critical,Failed login attempt (+30); 3rd+ failure in short time window (+20); Login during 00:00-05:00 hours (+10); Suspicious source IP detected (+30),"IMMEDIATE: Lock account, investigate source IP, review all recent activity from this user/IP",2025-11-20 05:49:11.007234,TP
+login,11,0,,,,,,,No Detection
+login,12,1,,,,,,,No Detection
+login,13,1,,,,,,,No Detection
+login,14,1,,,,,,,No Detection
+login,15,1,,,,,,,No Detection
+login,16,0,,,,,,,No Detection
+login,17,1,,,,,,,No Detection
+login,18,1,,,,,,,No Detection
+login,19,1,,,,,,,No Detection
+login,20,1,,,,,,,No Detection
+login,21,1,,,,,,,No Detection
+login,22,1,,,,,,,No Detection
+login,23,1,,,,,,,No Detection
+login,24,0,,,,,,,No Detection
+login,25,1,,,,,,,No Detection
+login,26,0,,,,,,,No Detection
+login,27,1,,,,,,,No Detection
+login,28,1,,,,,,,No Detection
+login,29,1,,,,,,,No Detection
+login,30,1,,,,,,,No Detection
+login,31,1,,,,,,,No Detection
+login,32,1,,,,,,,No Detection
+login,33,1,,,,,,,No Detection
+login,34,1,,,,,,,No Detection
+login,35,0,,,,,,,No Detection
+login,36,1,,,,,,,No Detection
+login,37,0,,,,,,,No Detection
+login,38,0,,,,,,,No Detection
+login,39,0,,,,,,,No Detection
+login,40,1,,,,,,,No Detection
+login,41,1,,,,,,,No Detection
+login,42,1,,,,,,,No Detection
+login,43,1,,,,,,,No Detection
+login,44,1,,,,,,,No Detection
+login,45,1,,,,,,,No Detection
+login,46,1,,,,,,,No Detection
+login,47,0,,,,,,,No Detection
+login,48,1,,,,,,,No Detection
+login,49,1,,,,,,,No Detection
+login,50,0,,,,,,,No Detection
+firewall,1,0,12.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.068694,TN
+firewall,2,0,11.0,20.0,low,Unusual port 6697 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.066781,TN
+firewall,3,0,14.0,20.0,low,Unusual port 1337 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.072431,TN
+firewall,4,0,13.0,20.0,low,Unusual port 31337 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.070223,TN
+firewall,5,0,16.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.082057,TN
+firewall,6,0,15.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.08024,TN
+firewall,7,0,18.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.086933,TN
+firewall,8,0,17.0,20.0,low,Unusual port 1337 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.074154,TN
+firewall,9,0,19.0,20.0,low,Unusual port 1337 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.095118,TN
+firewall,10,0,20.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.09634,TN
+firewall,11,0,22.0,20.0,low,Unusual port 6697 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.105239,TN
+firewall,12,0,21.0,20.0,low,Unusual port 31337 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.099253,TN
+firewall,13,0,24.0,20.0,low,Unusual port 6697 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.115535,TN
+firewall,14,0,23.0,20.0,low,Unusual port 6667 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.109627,TN
+firewall,15,0,26.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.127261,TN
+firewall,16,0,25.0,20.0,low,Unusual port 6667 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.121379,TN
+firewall,17,0,27.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.131821,TN
+firewall,18,0,28.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.136491,TN
+firewall,19,0,29.0,20.0,low,Unusual port 4444 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.13961,TN
+firewall,20,0,30.0,20.0,low,Unusual port 31337 detected (+20),"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.145519,TN
+firewall,21,0,31.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.151871,TN
+firewall,22,0,32.0,0.0,low,Normal firewall activity detected,"Continue normal monitoring, maintain firewall logs for analysis",2025-11-20 05:49:11.154702,TN
+firewall,23,1,33.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.15785,TP
+firewall,24,1,34.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.161679,TP
+firewall,25,1,35.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.165767,TP
+firewall,26,1,36.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.168635,TP
+firewall,27,1,37.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.173775,TP
+firewall,28,1,38.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.17791,TP
+firewall,29,1,39.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.18168,TP
+firewall,30,1,40.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.185571,TP
+firewall,31,1,41.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.1903,TP
+firewall,32,1,,,,,,,No Detection
+firewall,33,1,,,,,,,No Detection
+firewall,34,1,,,,,,,No Detection
+firewall,35,1,,,,,,,No Detection
+firewall,36,1,46.0,55.0,high,Repeated connection attempts/denials detected (+20); Port scanning activity detected (+35),"Block suspicious IP, investigate destination systems, review firewall rules",2025-11-20 05:49:11.215279,TP
+firewall,37,1,,,,,,,No Detection
+firewall,38,0,,,,,,,No Detection
+firewall,39,0,,,,,,,No Detection
+firewall,40,0,,,,,,,No Detection
+firewall,41,0,,,,,,,No Detection
+firewall,42,0,,,,,,,No Detection
+firewall,43,0,,,,,,,No Detection
+firewall,44,0,,,,,,,No Detection
+firewall,45,0,,,,,,,No Detection
+firewall,46,1,,,,,,,No Detection
+firewall,47,0,,,,,,,No Detection
+firewall,48,1,,,,,,,No Detection
+firewall,49,0,,,,,,,No Detection
+firewall,50,0,,,,,,,No Detection

@@ -1,0 +1,98 @@
+\i '/Users/AronaCho_1/Documents/info492/model_analysis/selected_data.sql'
+
+-- Create combined ground truth table
+CREATE TABLE public.combined_ground_truth (
+    event_id INTEGER PRIMARY KEY,
+    login INTEGER NOT NULL,
+    firewall INTEGER NOT NULL,
+    combined INTEGER NOT NULL,
+    CONSTRAINT login_binary CHECK (login IN (0, 1)),
+    CONSTRAINT firewall_binary CHECK (firewall IN (0, 1)),
+    CONSTRAINT combined_binary CHECK (combined IN (0, 1))
+);
+
+-- Insert data
+COPY public.combined_ground_truth (event_id, login, firewall, combined) FROM stdin;
+1	0	0	0
+2	1	0	1
+3	1	0	1
+4	1	0	1
+5	1	0	1
+6	1	0	1
+7	1	0	1
+8	1	0	1
+9	1	0	1
+10	1	0	1
+11	0	0	0
+12	1	0	1
+13	1	0	1
+14	1	0	1
+15	1	0	1
+16	0	0	0
+17	1	0	1
+18	1	0	1
+19	1	0	1
+20	1	0	1
+21	1	0	1
+22	1	0	1
+23	1	1	1
+24	0	1	1
+25	1	1	1
+26	0	1	1
+27	1	1	1
+28	1	1	1
+29	1	1	1
+30	1	1	1
+31	1	1	1
+32	1	1	1
+33	1	1	1
+34	1	1	1
+35	0	1	1
+36	1	1	1
+37	0	1	1
+38	0	0	0
+39	0	0	0
+40	1	0	1
+41	1	0	1
+42	1	0	1
+43	1	0	1
+44	1	0	1
+45	1	0	1
+46	1	1	1
+47	0	0	0
+48	1	1	1
+49	1	0	1
+50	0	0	0
+\.
+
+-- Create view for easy analysis
+CREATE VIEW public.combined_ground_truth_summary AS
+SELECT 
+    COUNT(*) as total_events,
+    SUM(login) as login_attacks,
+    SUM(firewall) as firewall_attacks,
+    SUM(combined) as combined_attacks,
+    SUM(CASE WHEN login = 0 THEN 1 ELSE 0 END) as login_benign,
+    SUM(CASE WHEN firewall = 0 THEN 1 ELSE 0 END) as firewall_benign,
+    SUM(CASE WHEN combined = 0 THEN 1 ELSE 0 END) as combined_benign
+FROM public.combined_ground_truth;
+
+-- Creating the confusion matrix for accuracy metrics
+SELECT 
+    cgt.event_id,
+    cgt.login as login_ground_truth,
+    cgt.firewall as firewall_ground_truth,
+    cgt.combined as combined_ground_truth,
+    ea.event_type,
+    ea.severity,
+    ea.risk_score,
+    CASE 
+        WHEN cgt.combined = 1 AND ea.severity IN ('high', 'critical') THEN 'True Positive'
+        WHEN cgt.combined = 0 AND ea.severity IN ('low', 'medium') THEN 'True Negative'
+        WHEN cgt.combined = 1 AND ea.severity IN ('low', 'medium') THEN 'False Negative'
+        WHEN cgt.combined = 0 AND ea.severity IN ('high', 'critical') THEN 'False Positive'
+    END as classification
+FROM public.combined_ground_truth cgt
+LEFT JOIN public.event_analyses ea 
+    ON (ea.event_type = 'login' AND ea.event_id = cgt.event_id)
+    OR (ea.event_type = 'firewall' AND ea.event_id = cgt.event_id);

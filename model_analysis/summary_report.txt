@@ -1,0 +1,35 @@
+============================================================
+SECURITY EVENT ANALYSIS - SUMMARY REPORT
+============================================================
+
+1. OVERALL PERFORMANCE
+----------------------------------------
+Total Events Analyzed: 42
+Accuracy: 95.24%
+Precision: 100.00%
+Recall: 89.47%
+F1 Score: 0.9444
+
+2. DETECTION SUMMARY
+----------------------------------------
+True Positives: 17 (Attacks correctly detected)
+True Negatives: 23 (Benign correctly identified)
+False Positives: 0 (False alarms)
+False Negatives: 2 (Missed attacks)
+
+3. PERFORMANCE BY EVENT TYPE
+----------------------------------------
+
+LOGIN:
+  Accuracy: 80.00%
+  Precision: 100.00%
+  Recall: 77.78%
+  F1 Score: 0.8750
+
+FIREWALL:
+  Accuracy: 100.00%
+  Precision: 100.00%
+  Recall: 100.00%
+  F1 Score: 1.0000
+
+============================================================

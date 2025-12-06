@@ -1,0 +1,4 @@
+scope,True Positives,True Negatives,False Positives,False Negatives,Total,Precision,Recall,F1 Score,Accuracy,Specificity,False Positive Rate,False Negative Rate
+Overall,17,23,0,2,42,1.0,0.8947,0.9444,0.9524,1.0,0.0,0.1053
+Login,7,1,0,2,10,1.0,0.7778,0.875,0.8,1.0,0.0,0.2222
+Firewall,10,22,0,0,32,1.0,1.0,1.0,1.0,1.0,0.0,0.0
